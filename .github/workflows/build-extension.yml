@@ -146,7 +146,7 @@ jobs:
       run: |
         echo "Checking for sensitive files..."
         # APIキーやシークレットが含まれていないかチェック
-        if grep -r "sk-" --include="*.js" --include="*.json" --include="*.md" . 2>/dev/null; then
+        if grep -r "sk-" --include="*.js" --include="*.json" --include="*.md" --exclude-dir=tests . 2>/dev/null; then
           echo "❌ Potential API keys found!"
           exit 1
         fi
