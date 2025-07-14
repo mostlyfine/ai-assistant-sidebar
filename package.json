@@ -1,0 +1,37 @@
+{
+  "name": "ai-assistant-sidebar-tests",
+  "version": "1.0.0",
+  "description": "Unit tests for AI Assistant Sidebar Chrome Extension",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "build": "npm run test && npm run build:extension",
+    "build:extension": "node scripts/build.js"
+  },
+  "devDependencies": {
+    "jest": "^27.5.1",
+    "jest-chrome": "^0.8.0",
+    "jest-environment-jsdom": "^27.5.1",
+    "@types/chrome": "^0.0.246",
+    "archiver": "^5.3.1"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "testMatch": ["<rootDir>/tests/**/*.test.js"],
+    "collectCoverageFrom": [
+      "scripts/**/*.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"],
+    "coverageThreshold": {
+      "global": {
+        "branches": 10,
+        "functions": 10,
+        "lines": 10,
+        "statements": 10
+      }
+    }
+  }
+}

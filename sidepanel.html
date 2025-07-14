@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Sidebar</title>
+  <link rel="stylesheet" href="styles/sidepanel.css">
+</head>
+<body>
+  <!-- API設定画面 -->
+  <div id="setupScreen" class="screen">
+    <div class="setup-container">
+      <div class="header">
+        <h1 data-i18n="appTitle">🤖 AI Assistant</h1>
+        <p data-i18n="setupTitle">AI APIを設定してください</p>
+      </div>
+      
+      <!-- タブナビゲーション -->
+      <div class="tab-navigation">
+        <button class="tab-button active" data-tab="vertex-ai" data-i18n="tabVertexAI">🔷 Vertex AI</button>
+        <button class="tab-button" data-tab="openai-compatible" data-i18n="tabOpenAICompatible">🔵 OpenAI Compatible</button>
+        <button class="tab-button" data-tab="chatgpt" data-i18n="tabChatGPT">🟢 ChatGPT</button>
+        <button class="tab-button" data-tab="aws-bedrock" data-i18n="tabAWSBedrock">🟠 AWS Bedrock</button>
+        <button class="tab-button" data-tab="general" data-i18n="tabGeneral">⚙️ 全体設定</button>
+      </div>
+
+      <!-- Vertex AI設定タブ -->
+      <div id="vertex-ai-tab" class="tab-content active">
+        <h3 data-i18n="vertexAISettings">Vertex AI 設定</h3>
+        
+        <!-- 認証方式選択 -->
+        <div class="input-group">
+          <label data-i18n="authMethod">認証方式</label>
+          <div class="auth-method-selection">
+            <label class="radio-option">
+              <input type="radio" name="vertexAuthMethod" value="service-account" checked>
+              <span class="radio-custom"></span>
+              <span data-i18n="serviceAccountJSON">Service Account JSON</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="vertexAuthMethod" value="api-key">
+              <span class="radio-custom"></span>
+              <span data-i18n="apiKey">API Key</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Service Account設定 -->
+        <div id="serviceAccountSection">
+          <div class="input-group">
+            <label for="serviceAccountFile" data-i18n="serviceAccountFile">Service Account JSON ファイル</label>
+            <div class="file-input-container">
+              <input type="file" id="serviceAccountFile" accept=".json" style="display: none;">
+              <button type="button" id="selectFileButton" class="file-select-button">
+                <span data-i18n="selectJSONFile">📁 JSONファイルを選択</span>
+              </button>
+              <span id="selectedFileName" class="file-name"></span>
+            </div>
+          </div>
+          
+          <div class="service-account-info" id="serviceAccountInfo" style="display: none;">
+            <h4 data-i18n="serviceAccountInfo">Service Account 情報</h4>
+            <div class="info-item">
+              <span class="label" data-i18n="projectId">Project ID:</span>
+              <span id="projectId"></span>
+            </div>
+            <div class="info-item">
+              <span class="label" data-i18n="email">Email:</span>
+              <span id="serviceAccountEmail"></span>
+            </div>
+            <div class="info-item">
+              <span class="label" data-i18n="keyId">Key ID:</span>
+              <span id="serviceAccountKeyId"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Key設定 -->
+        <div id="apiKeySection" style="display: none;">
+          <div class="input-group">
+            <label for="vertexProjectId" data-i18n="projectId">Project ID</label>
+            <input type="text" id="vertexProjectId" data-i18n-placeholder="placeholderGoogleCloudProjectId">
+          </div>
+          <div class="input-group">
+            <label for="vertexApiKey" data-i18n="apiKey">API Key</label>
+            <input type="password" id="vertexApiKey" data-i18n-placeholder="placeholderVertexApiKey">
+          </div>
+        </div>
+        
+        <div class="input-group" id="locationGroup" style="display: none;">
+          <label for="location" data-i18n="location">Location (リージョン)</label>
+          <select id="location">
+            <option value="us-central1">us-central1</option>
+            <option value="us-west1">us-west1</option>
+            <option value="asia-northeast1">asia-northeast1</option>
+            <option value="europe-west1">europe-west1</option>
+          </select>
+        </div>
+
+        <div class="input-group" id="vertexModelGroup" style="display: none;">
+          <label for="vertexModel" data-i18n="model">モデル</label>
+          <select id="vertexModel">
+            <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+            <option value="gemini-2.0-flash-exp">gemini-2.0-flash-exp (US only)</option>
+            <option value="gemini-1.5-flash-002">gemini-1.5-flash-002</option>
+            <option value="gemini-1.5-flash-001">gemini-1.5-flash-001</option>
+            <option value="gemini-1.5-pro-002">gemini-1.5-pro-002</option>
+            <option value="gemini-1.5-pro-001">gemini-1.5-pro-001</option>
+            <option value="gemini-pro">gemini-pro</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- OpenAI Compatible設定タブ -->
+      <div id="openai-compatible-tab" class="tab-content">
+        <h3 data-i18n="openaiCompatibleSettings">OpenAI Compatible 設定</h3>
+        
+        <!-- プリセット選択 -->
+        <div class="input-group">
+          <label for="openaiPreset" data-i18n="preset">プリセット</label>
+          <select id="openaiPreset">
+            <option value="openai">OpenAI</option>
+            <option value="azure">Azure OpenAI</option>
+            <option value="anthropic">Anthropic Claude</option>
+            <option value="groq">Groq</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="ollama">Ollama</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        
+        <!-- エンドポイント -->
+        <div class="input-group">
+          <label for="openaiEndpoint" data-i18n="endpoint">エンドポイント</label>
+          <input type="url" id="openaiEndpoint" data-i18n-placeholder="placeholderOpenAIEndpoint">
+        </div>
+        
+        <!-- API キー -->
+        <div class="input-group">
+          <label for="openaiApiKey" data-i18n="apiKey">API キー</label>
+          <input type="password" id="openaiApiKey" data-i18n-placeholder="placeholderOpenAIApiKey">
+        </div>
+        
+        <!-- モデル -->
+        <div class="input-group">
+          <label for="openaiModel" data-i18n="model">モデル</label>
+          <select id="openaiModel">
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="gpt-4o-mini">GPT-4o mini</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+          </select>
+        </div>
+        
+        <!-- Azure用追加設定 -->
+        <div id="azureSettings" class="azure-settings" style="display: none;">
+          <div class="input-group">
+            <label for="azureApiVersion" data-i18n="apiVersion">API バージョン</label>
+            <select id="azureApiVersion">
+              <option value="2024-02-15-preview">2024-02-15-preview</option>
+              <option value="2023-12-01-preview">2023-12-01-preview</option>
+              <option value="2023-05-15">2023-05-15</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label for="azureDeployment" data-i18n="deploymentName">デプロイメント名</label>
+            <input type="text" id="azureDeployment" data-i18n-placeholder="placeholderDeploymentName">
+          </div>
+        </div>
+        
+        <!-- カスタムモデル入力 -->
+        <div id="customModelInput" class="input-group" style="display: none;">
+          <label for="customModel" data-i18n="customModel">カスタムモデル</label>
+          <input type="text" id="customModel" data-i18n-placeholder="placeholderCustomModel">
+        </div>
+      </div>
+
+      <!-- ChatGPT設定タブ -->
+      <div id="chatgpt-tab" class="tab-content">
+        <h3 data-i18n="chatGPTSettings">ChatGPT API 設定</h3>
+        <div class="input-group">
+          <label for="chatgptApiKey" data-i18n="apiKey">API キー</label>
+          <input type="password" id="chatgptApiKey" data-i18n-placeholder="placeholderOpenAIApiKey">
+        </div>
+        <div class="input-group">
+          <label for="chatgptModel" data-i18n="model">モデル</label>
+          <select id="chatgptModel">
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="gpt-4o-mini">GPT-4o mini</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="chatgptOrganization" data-i18n="organizationId">Organization ID (オプション)</label>
+          <input type="text" id="chatgptOrganization" data-i18n-placeholder="placeholderOrganizationId">
+        </div>
+      </div>
+
+      <!-- AWS Bedrock設定タブ -->
+      <div id="aws-bedrock-tab" class="tab-content">
+        <h3 data-i18n="awsBedrockSettings">AWS Bedrock 設定</h3>
+        <div class="input-group">
+          <label for="awsAccessKeyId" data-i18n="awsAccessKeyId">AWS Access Key ID</label>
+          <input type="password" id="awsAccessKeyId" data-i18n-placeholder="placeholderAWSAccessKeyId">
+        </div>
+        <div class="input-group">
+          <label for="awsSecretAccessKey" data-i18n="awsSecretAccessKey">AWS Secret Access Key</label>
+          <input type="password" id="awsSecretAccessKey" data-i18n-placeholder="placeholderAWSSecretAccessKey">
+        </div>
+        <div class="input-group">
+          <label for="awsSessionToken" data-i18n="awsSessionToken">AWS Session Token (オプション)</label>
+          <input type="password" id="awsSessionToken" data-i18n-placeholder="placeholderAWSSessionToken">
+        </div>
+        <div class="input-group">
+          <label for="awsRegion" data-i18n="awsRegion">AWS Region</label>
+          <select id="awsRegion">
+            <option value="us-east-1">US East (N. Virginia)</option>
+            <option value="us-west-2">US West (Oregon)</option>
+            <option value="eu-west-1">Europe (Ireland)</option>
+            <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+            <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="awsBedrockModel" data-i18n="model">モデル</label>
+          <select id="awsBedrockModel">
+            <option value="anthropic.claude-3-5-sonnet-20241022-v2:0">Claude 3.5 Sonnet v2</option>
+            <option value="anthropic.claude-3-5-sonnet-20240620-v1:0">Claude 3.5 Sonnet v1</option>
+            <option value="anthropic.claude-3-haiku-20240307-v1:0">Claude 3 Haiku</option>
+            <option value="anthropic.claude-3-sonnet-20240229-v1:0">Claude 3 Sonnet</option>
+            <option value="anthropic.claude-3-opus-20240229-v1:0">Claude 3 Opus</option>
+            <option value="amazon.titan-text-premier-v1:0">Titan Text Premier</option>
+            <option value="amazon.titan-text-express-v1">Titan Text Express</option>
+            <option value="cohere.command-r-plus-v1:0">Command R+</option>
+            <option value="cohere.command-r-v1:0">Command R</option>
+            <option value="meta.llama3-2-90b-instruct-v1:0">Llama 3.2 90B Instruct</option>
+            <option value="meta.llama3-2-11b-instruct-v1:0">Llama 3.2 11B Instruct</option>
+            <option value="meta.llama3-2-3b-instruct-v1:0">Llama 3.2 3B Instruct</option>
+            <option value="meta.llama3-2-1b-instruct-v1:0">Llama 3.2 1B Instruct</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 全体設定タブ -->
+      <div id="general-tab" class="tab-content">
+        <h3 data-i18n="generalSettings">全体設定</h3>
+        <div class="input-group">
+          <label for="defaultProvider" data-i18n="defaultProvider">デフォルト AI プロバイダー</label>
+          <select id="defaultProvider">
+            <option value="vertex-ai">Vertex AI</option>
+            <option value="openai-compatible">OpenAI Compatible</option>
+            <option value="chatgpt">ChatGPT</option>
+            <option value="aws-bedrock">AWS Bedrock</option>
+          </select>
+        </div>
+        
+        <div class="custom-instructions">
+          <h4 data-i18n="customInstructions">カスタムインストラクション</h4>
+          <div class="input-group">
+            <label for="customInstructionsText" data-i18n="customInstructionsText">システムプロンプト</label>
+            <textarea 
+              id="customInstructionsText" 
+              rows="4" 
+              data-i18n-placeholder="placeholderCustomInstructions"
+              class="custom-instructions-textarea"
+            ></textarea>
+            <small class="help-text" data-i18n="customInstructionsHelp">
+              すべてのAI APIに適用される共通のシステムプロンプトです。空欄の場合はデフォルトの動作になります。
+            </small>
+          </div>
+        </div>
+
+        <div class="ui-settings">
+          <h4 data-i18n="uiSettings">UI設定</h4>
+          
+          <div class="input-group">
+            <label for="language" data-i18n="language">言語</label>
+            <select id="language">
+              <option value="ja">日本語</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          
+          <div class="input-group">
+            <label for="fontSize" data-i18n="fontSize">フォントサイズ</label>
+            <select id="fontSize">
+              <option value="8">8pt</option>
+              <option value="9">9pt</option>
+              <option value="10">10pt</option>
+              <option value="11">11pt</option>
+              <option value="12" selected>12pt</option>
+              <option value="13">13pt</option>
+              <option value="14">14pt</option>
+              <option value="15">15pt</option>
+              <option value="16">16pt</option>
+              <option value="17">17pt</option>
+              <option value="18">18pt</option>
+              <option value="19">19pt</option>
+              <option value="20">20pt</option>
+              <option value="21">21pt</option>
+              <option value="22">22pt</option>
+              <option value="23">23pt</option>
+              <option value="24">24pt</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="useShiftEnter" checked>
+              <span class="checkmark"></span>
+              <span data-i18n="useShiftEnter">Shift+Enterで送信</span>
+            </label>
+            <small class="help-text" data-i18n="useShiftEnterHelp">オフの場合、Enterキーで送信されます</small>
+          </div>
+        </div>
+
+        <div class="export-settings">
+          <h4 data-i18n="exportSettings">エクスポート設定</h4>
+          
+          <div class="input-group">
+            <label data-i18n="exportChatHistory">チャット履歴のエクスポート</label>
+            <div class="export-buttons">
+              <button id="exportAllHistory" class="export-button" data-i18n="exportAllHistory">📄 全履歴をエクスポート</button>
+              <button id="exportCurrentHistory" class="export-button" data-i18n="exportCurrentHistory">📋 現在のAI履歴をエクスポート</button>
+              <button id="clearLogsButton" class="clear-logs-btn" data-i18n="clearLogs" title="Clear Chat History">🗑️ ログをクリア</button>
+            </div>
+            <small class="help-text" data-i18n="exportHelpText">
+              履歴はMarkdown形式でダウンロードされます
+            </small>
+          </div>
+        </div>
+      </div>
+        
+      <div class="button-group">
+        <button id="cancelConfig" class="cancel-button" data-i18n="cancel">キャンセル</button>
+        <button id="saveConfig" class="save-button" data-i18n="saveSettings">設定を保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- チャット画面 -->
+  <div id="chatScreen" class="screen hidden">
+    <div class="chat-container">
+      <header class="chat-header">
+        <h1 id="chatTitle" data-i18n="appTitle">AI Assistant</h1>
+        <div class="header-buttons">
+          <button id="settingsButton" class="settings-btn" data-i18n="settings">⚙️</button>
+        </div>
+      </header>
+      
+      <main class="chat-main">
+        <div class="messages" id="messages">
+          <div class="welcome-message">
+            <p data-i18n="welcomeMessage">Gemini AIへようこそ！何かお手伝いできることはありますか？</p>
+          </div>
+        </div>
+        
+        <div class="input-container">
+          <div class="resize-handle" id="resizeHandle">
+            <div class="resize-bar"></div>
+          </div>
+          <div class="input-controls-top">
+            <label class="checkbox-control">
+              <input type="checkbox" id="includePageContent" />
+              <span class="checkmark-custom"></span>
+              <span data-i18n="includePageContent">📄 ページ内容を含める</span>
+            </label>
+            <label class="checkbox-control">
+              <input type="checkbox" id="includeSelectedText" />
+              <span class="checkmark-custom"></span>
+              <span data-i18n="includeSelectedText">📝 選択テキストを含める</span>
+            </label>
+          </div>
+          <div class="input-wrapper">
+            <textarea 
+              id="messageInput" 
+              data-i18n-placeholder="messageInputPlaceholder"
+              rows="2"
+            ></textarea>
+            <button id="sendButton" class="send-button">
+              <span id="sendIcon">📤</span>
+              <span id="loadingIcon" class="loading hidden">⏳</span>
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  
+  <script src="scripts/i18n.js"></script>
+  <script src="scripts/security-manager.js"></script>
+  <script src="scripts/crypto-utils.js"></script>
+  <script src="scripts/markdown-parser.js"></script>
+  <script src="scripts/openai-compatible.js"></script>
+  <script src="scripts/chatgpt-api.js"></script>
+  <script src="scripts/aws-bedrock.js"></script>
+  <script src="scripts/sidepanel.js"></script>
+</body>
+</html>

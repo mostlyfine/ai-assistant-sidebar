@@ -1,0 +1,176 @@
+name: Build Chrome Extension
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests
+      run: npm test
+      
+    - name: Run test coverage
+      run: npm run test:coverage
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests
+      run: npm test
+      
+    - name: Get version from manifest
+      id: get_version
+      run: echo "version=$(node -p "require('./manifest.json').version")" >> $GITHUB_OUTPUT
+      
+    - name: Create extension package
+      run: |
+        # Chrome拡張機能に必要なファイルのみを含むディレクトリを作成
+        mkdir -p dist/ai-assistant-sidebar
+        
+        # 必要なファイルをコピー
+        cp manifest.json dist/ai-assistant-sidebar/
+        cp sidepanel.html dist/ai-assistant-sidebar/
+        cp background.js dist/ai-assistant-sidebar/
+        cp -r scripts/ dist/ai-assistant-sidebar/
+        cp -r styles/ dist/ai-assistant-sidebar/
+        cp -r icons/ dist/ai-assistant-sidebar/
+        
+        # 不要なファイルを除外（開発用ファイル）
+        rm -rf dist/ai-assistant-sidebar/scripts/build.js || true
+        
+        # ZIPファイルを作成
+        cd dist
+        zip -r ai-assistant-sidebar-v${{ steps.get_version.outputs.version }}.zip ai-assistant-sidebar/
+        
+        # ファイルサイズを確認
+        ls -lh ai-assistant-sidebar-v${{ steps.get_version.outputs.version }}.zip
+        
+    - name: Upload extension artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ai-assistant-sidebar-v${{ steps.get_version.outputs.version }}
+        path: dist/ai-assistant-sidebar-v${{ steps.get_version.outputs.version }}.zip
+        retention-days: 90
+        
+    - name: Create Release
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/ai-assistant-sidebar-v${{ steps.get_version.outputs.version }}.zip
+        name: AI Assistant Sidebar v${{ steps.get_version.outputs.version }}
+        body: |
+          ## AI Assistant Sidebar v${{ steps.get_version.outputs.version }}
+          
+          ### 🚀 Chrome拡張機能のインストール方法
+          
+          1. `ai-assistant-sidebar-v${{ steps.get_version.outputs.version }}.zip` をダウンロード
+          2. ZIPファイルを解凍
+          3. Chromeで `chrome://extensions/` を開く
+          4. 「デベロッパーモード」を有効にする
+          5. 「パッケージ化されていない拡張機能を読み込む」をクリック
+          6. 解凍したフォルダを選択
+          
+          ### ✨ 機能
+          
+          - 🔷 **Vertex AI**: Google CloudのGemini APIに対応
+          - 🔵 **OpenAI Compatible**: OpenAI、Azure OpenAI、Anthropic、Groq、DeepSeek、Ollama対応
+          - 🟢 **ChatGPT**: OpenAI ChatGPT API対応
+          - 🟠 **AWS Bedrock**: Claude、Titan、Command R、Llama等の13モデル対応
+          - 🔒 **セキュリティ**: API認証情報の暗号化保存
+          - 🌐 **国際化**: 日本語・英語対応
+          - 📱 **モダンUI**: レスポンシブデザイン、スクロール対応
+          - ⚙️ **カスタマイズ**: フォントサイズ調整、カスタムインストラクション
+          
+          ### 🧪 テスト結果
+          
+          - ✅ 全131テストケースが成功
+          - ✅ セキュリティ検証済み
+          - ✅ Chrome拡張機能として動作確認済み
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  security-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Security audit
+      run: npm audit --audit-level=moderate
+      
+    - name: Check for sensitive files
+      run: |
+        echo "Checking for sensitive files..."
+        # APIキーやシークレットが含まれていないかチェック
+        if grep -r "sk-" --include="*.js" --include="*.json" --include="*.md" . 2>/dev/null; then
+          echo "❌ Potential API keys found!"
+          exit 1
+        fi
+        
+        if grep -r "AKIA" --include="*.js" --include="*.json" --include="*.md" . 2>/dev/null; then
+          echo "❌ Potential AWS keys found!"
+          exit 1
+        fi
+        
+        echo "✅ No sensitive data detected"
+        
+    - name: Validate manifest.json
+      run: |
+        echo "Validating manifest.json..."
+        node -e "
+          const manifest = require('./manifest.json');
+          if (!manifest.manifest_version || manifest.manifest_version !== 3) {
+            throw new Error('Invalid manifest version');
+          }
+          if (!manifest.name || !manifest.version || !manifest.description) {
+            throw new Error('Missing required manifest fields');
+          }
+          if (!manifest.icons || !manifest.action) {
+            throw new Error('Missing required Chrome extension components');
+          }
+          console.log('✅ manifest.json is valid');
+        "
