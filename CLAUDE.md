@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### テスト実行コマンド
 ```bash
-npm test              # 通常のユニットテスト実行（131テストケース）
+npm test              # 通常のユニットテスト実行（112テストケース）
 npm run test:watch    # ウォッチモードでテスト実行
 npm run test:coverage # カバレッジ付きテスト実行
 ```
@@ -299,7 +299,7 @@ gemini-plugin/
 ## テストシステム
 
 ### 実装済みテスト体系
-1. **包括的ユニットテスト**: 107個のテストケース（100%パス率）
+1. **包括的ユニットテスト**: 112個のテストケース（100%パス率）
 2. **API統合テスト**: 全AI プロバイダーの統合テスト
 3. **国際化テスト**: 日本語・英語対応の完全テスト
 4. **ソースコード検証テスト**: セキュリティ・品質検証

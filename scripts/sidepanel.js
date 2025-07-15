@@ -674,36 +674,40 @@ class AIAssistant {
     const azureDeployment = document.getElementById('azureDeployment').value;
     const organizationId = document.getElementById('organizationId').value;
 
-    // OpenAI Compatible settings validation
+    // OpenAI Compatible settings validation (only if any field is filled)
     let openaiConfigValid = false;
-    if (openaiPreset === 'azure') {
-      // Azure validation: endpoint, API key, and deployment name required
-      openaiConfigValid = openaiEndpoint && openaiApiKey && azureDeployment;
-      if (!openaiConfigValid) {
-        if (!openaiEndpoint) {
-          alert('Azure OpenAI: エンドポイントURL（例：https://yourresource.openai.azure.com）を入力してください。');
-          return;
+    const hasOpenaiConfig = openaiEndpoint || openaiApiKey || azureDeployment || customModel;
+    
+    if (hasOpenaiConfig) {
+      if (openaiPreset === 'azure') {
+        // Azure validation: endpoint, API key, and deployment name required
+        openaiConfigValid = openaiEndpoint && openaiApiKey && azureDeployment;
+        if (!openaiConfigValid) {
+          if (!openaiEndpoint) {
+            alert('Azure OpenAI: エンドポイントURL（例：https://yourresource.openai.azure.com）を入力してください。');
+            return;
+          }
+          if (!openaiApiKey) {
+            alert('Azure OpenAI: APIキーを入力してください。');
+            return;
+          }
+          if (!azureDeployment) {
+            alert('Azure OpenAI: デプロイメント名を入力してください。');
+            return;
+          }
         }
-        if (!openaiApiKey) {
-          alert('Azure OpenAI: APIキーを入力してください。');
-          return;
-        }
-        if (!azureDeployment) {
-          alert('Azure OpenAI: デプロイメント名を入力してください。');
-          return;
-        }
-      }
-    } else {
-      // Other provider validation: endpoint and API key required
-      openaiConfigValid = openaiEndpoint && openaiApiKey;
-      if (!openaiConfigValid) {
-        if (!openaiEndpoint) {
-          alert('OpenAI Compatible: エンドポイントURLを入力してください。');
-          return;
-        }
-        if (!openaiApiKey) {
-          alert('OpenAI Compatible: APIキーを入力してください。');
-          return;
+      } else {
+        // Other provider validation: endpoint and API key required
+        openaiConfigValid = openaiEndpoint && openaiApiKey;
+        if (!openaiConfigValid) {
+          if (!openaiEndpoint) {
+            alert('OpenAI Compatible: エンドポイントURLを入力してください。');
+            return;
+          }
+          if (!openaiApiKey) {
+            alert('OpenAI Compatible: APIキーを入力してください。');
+            return;
+          }
         }
       }
     }
