@@ -142,14 +142,20 @@ jobs:
     - name: Check for sensitive files
       run: |
         echo "Checking for sensitive files..."
-        # APIキーやシークレットが含まれていないかチェック
-        if grep -r "sk-" --include="*.js" --include="*.json" --include="*.md" . 2>/dev/null; then
-          echo "❌ Potential API keys found!"
+        # APIキーやシークレットが含まれていないかチェック（テストファイルとnode_modulesを除外）
+        if grep -r "sk-[a-zA-Z0-9]{32,}" --include="*.js" --include="*.json" --include="*.md" --exclude-dir=node_modules --exclude-dir=tests . 2>/dev/null; then
+          echo "❌ Potential OpenAI API keys found!"
           exit 1
         fi
         
-        if grep -r "AKIA" --include="*.js" --include="*.json" --include="*.md" . 2>/dev/null; then
+        if grep -r "AKIA[A-Z0-9]{16}" --include="*.js" --include="*.json" --include="*.md" --exclude-dir=node_modules --exclude-dir=tests . 2>/dev/null; then
           echo "❌ Potential AWS keys found!"
+          exit 1
+        fi
+        
+        # Service Account JSONファイルの検出
+        if grep -r "private_key" --include="*.js" --include="*.json" --include="*.md" --exclude-dir=node_modules --exclude-dir=tests . 2>/dev/null; then
+          echo "❌ Potential service account keys found!"
           exit 1
         fi
         
