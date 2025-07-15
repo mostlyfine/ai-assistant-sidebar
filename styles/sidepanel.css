@@ -5,7 +5,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
   background-color: #f8f9fa;
   height: 100vh;
   overflow: hidden;
@@ -63,15 +63,19 @@ body {
 
 .tab-button {
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.5rem;
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.7);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .tab-button:hover {
@@ -83,6 +87,14 @@ body {
   background: rgba(255, 255, 255, 0.2);
   color: white;
   backdrop-filter: blur(10px);
+}
+
+.tab-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 0;
+  vertical-align: middle;
+  display: block;
 }
 
 /* タブコンテンツ */
@@ -343,6 +355,12 @@ body {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+.settings-icon {
+  width: 18px;
+  height: 18px;
+  filter: invert(1);
+}
+
 .chat-main {
   flex: 1;
   display: flex;
@@ -413,6 +431,15 @@ body {
   margin: 0;
 }
 
+.message-text p {
+  margin: 0;
+  padding: 0;
+}
+
+.message-text p + p {
+  margin-top: 0.5rem;
+}
+
 .message-time {
   font-size: 0.75rem;
   opacity: 0.7;
@@ -426,14 +453,14 @@ body {
 }
 
 .user-message .message-content {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  color: white;
+  background: #e6f3ff;
+  color: #444;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .user-message .message-time {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(68, 68, 68, 0.7);
   align-self: flex-end;
 }
 
@@ -448,10 +475,11 @@ body {
   border: 1px solid #e9ecef;
   border-bottom-left-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: #444;
 }
 
 .ai-message .message-time {
-  color: #6c757d;
+  color: rgba(68, 68, 68, 0.7);
   align-self: flex-start;
 }
 
@@ -597,6 +625,23 @@ body {
 /* ローディングメッセージ */
 .loading-message {
   opacity: 0.9;
+}
+
+/* AIプロバイダーアイコン */
+.message-provider-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+  vertical-align: text-bottom;
+  display: inline-block;
+}
+
+.chat-title-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: text-bottom;
+  display: inline-block;
 }
 
 .loading-message .message-content {
@@ -752,6 +797,10 @@ body {
   border-radius: 20px;
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #444;
   resize: none;
   outline: none;
   transition: border-color 0.2s;

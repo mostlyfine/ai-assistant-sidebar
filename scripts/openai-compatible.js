@@ -21,7 +21,8 @@ class OpenAICompatibleAPI {
           'gpt-4',
           'gpt-4-turbo',
           'gpt-3.5-turbo'
-        ]
+        ],
+        fixedEndpoint: true
       },
       'azure': {
         name: 'Azure OpenAI',
@@ -29,10 +30,30 @@ class OpenAICompatibleAPI {
         authHeader: 'api-key',
         authPrefix: '',
         pathTemplate: '/openai/deployments/{deployment}/chat/completions?api-version={apiVersion}',
-        models: [],
+        models: [
+          'gpt-4o',
+          'gpt-4o-2024-11-20',
+          'gpt-4o-2024-08-06',
+          'gpt-4o-2024-05-13',
+          'gpt-4o-mini',
+          'gpt-4o-mini-2024-07-18',
+          'gpt-4',
+          'gpt-4-turbo-2024-04-09',
+          'gpt-4-0613',
+          'gpt-4-0314',
+          'gpt-4-32k',
+          'gpt-4-32k-0613',
+          'gpt-4-32k-0314',
+          'gpt-35-turbo',
+          'gpt-35-turbo-0125',
+          'gpt-35-turbo-1106',
+          'gpt-35-turbo-instruct',
+          'gpt-35-turbo-instruct-0914'
+        ],
         requiresDeployment: true,
         requiresApiVersion: true,
-        defaultApiVersion: '2024-02-15-preview'
+        defaultApiVersion: '2024-02-15-preview',
+        fixedEndpoint: false
       },
       'anthropic': {
         name: 'Anthropic Claude',
@@ -47,7 +68,8 @@ class OpenAICompatibleAPI {
           'claude-3-sonnet-20240229',
           'claude-3-haiku-20240307'
         ],
-        messageFormat: 'anthropic'
+        messageFormat: 'anthropic',
+        fixedEndpoint: true
       },
       'groq': {
         name: 'Groq',
@@ -60,7 +82,8 @@ class OpenAICompatibleAPI {
           'llama-3.1-8b-instant',
           'mixtral-8x7b-32768',
           'gemma-7b-it'
-        ]
+        ],
+        fixedEndpoint: true
       },
       'deepseek': {
         name: 'DeepSeek',
@@ -71,7 +94,8 @@ class OpenAICompatibleAPI {
         models: [
           'deepseek-chat',
           'deepseek-coder'
-        ]
+        ],
+        fixedEndpoint: true
       },
       'ollama': {
         name: 'Ollama',
@@ -80,7 +104,24 @@ class OpenAICompatibleAPI {
         authPrefix: 'Bearer ',
         pathTemplate: '/chat/completions',
         models: [],
-        requiresCustomModels: true
+        requiresCustomModels: true,
+        fixedEndpoint: true
+      },
+      'chatgpt': {
+        name: 'ChatGPT',
+        endpoint: 'https://api.openai.com/v1',
+        authHeader: 'Authorization',
+        authPrefix: 'Bearer ',
+        pathTemplate: '/chat/completions',
+        models: [
+          'gpt-4o',
+          'gpt-4o-mini',
+          'gpt-4',
+          'gpt-4-turbo',
+          'gpt-3.5-turbo'
+        ],
+        supportsOrganization: true,
+        fixedEndpoint: true
       },
       'custom': {
         name: 'Custom OpenAI Compatible',
@@ -105,6 +146,17 @@ class OpenAICompatibleAPI {
     if (this.preset === 'azure') {
       const deployment = this.config.deployment || this.model;
       const apiVersion = this.config.apiVersion || presetConfig.defaultApiVersion;
+      
+      // Azure requires endpoint URL
+      if (!this.endpoint || this.endpoint.trim() === '') {
+        throw new Error('Azure OpenAI requires an endpoint URL (e.g., https://yourresource.openai.azure.com)');
+      }
+      
+      // Azure requires deployment name
+      if (!deployment) {
+        throw new Error('Azure OpenAI requires a deployment name');
+      }
+      
       path = path.replace('{deployment}', deployment);
       path = path.replace('{apiVersion}', apiVersion);
     }
@@ -125,6 +177,18 @@ class OpenAICompatibleAPI {
     // Additional headers for Anthropic
     if (this.preset === 'anthropic') {
       headers['anthropic-version'] = '2023-06-01';
+    }
+    
+    // Organization header for ChatGPT
+    if (this.preset === 'chatgpt' && this.config.organization) {
+      headers['OpenAI-Organization'] = this.config.organization;
+    }
+    
+    // Azure OpenAI specific validation
+    if (this.preset === 'azure') {
+      if (!this.apiKey || this.apiKey.trim() === '') {
+        throw new Error('Azure OpenAI requires an API key');
+      }
     }
     
     return headers;
@@ -179,10 +243,8 @@ class OpenAICompatibleAPI {
       stream: false
     };
     
-    // For Azure, use deployment name as model
-    if (this.preset === 'azure') {
-      requestBody.model = this.config.deployment || this.model;
-    } else {
+    // For Azure, don't include model in request body (specified in URL)
+    if (this.preset !== 'azure') {
       requestBody.model = this.model;
     }
     
@@ -213,6 +275,12 @@ class OpenAICompatibleAPI {
       const headers = this.buildHeaders();
       const body = this.buildRequestBody(message, systemPrompt);
 
+      console.log('OpenAI Compatible API Request:', {
+        url: url,
+        preset: this.preset,
+        headers: { ...headers, [this.getPresetConfig().authHeader]: '[REDACTED]' }
+      });
+
       const response = await fetch(url, {
         method: 'POST',
         headers: headers,
@@ -221,6 +289,14 @@ class OpenAICompatibleAPI {
 
       if (!response.ok) {
         const errorText = await response.text();
+        const errorDetails = {
+          status: response.status,
+          statusText: response.statusText,
+          url: url,
+          preset: this.preset,
+          errorText: errorText
+        };
+        console.error('OpenAI Compatible API Error Details:', errorDetails);
         throw new Error(`API エラー (${response.status}): ${errorText}`);
       }
 
@@ -229,6 +305,26 @@ class OpenAICompatibleAPI {
 
     } catch (error) {
       console.error('OpenAI Compatible API呼び出しエラー:', error);
+      
+      // Network error handling
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        if (this.preset === 'azure') {
+          throw new Error(`Azure OpenAI接続エラー: ${this.endpoint}への接続に失敗しました。エンドポイントURL、APIキー、デプロイメント名を確認してください。`);
+        } else {
+          throw new Error(`ネットワークエラー: APIへの接続に失敗しました。エンドポイントURLと設定を確認してください。`);
+        }
+      }
+      
+      // Azure-specific error handling
+      if (this.preset === 'azure') {
+        if (error.message.includes('deployment')) {
+          throw new Error('Azure OpenAI: デプロイメント名が設定されていません。');
+        }
+        if (error.message.includes('endpoint')) {
+          throw new Error('Azure OpenAI: エンドポイントURLが設定されていません。');
+        }
+      }
+      
       throw error;
     }
   }
@@ -236,6 +332,7 @@ class OpenAICompatibleAPI {
   static getAvailablePresets() {
     return [
       { id: 'openai', name: 'OpenAI' },
+      { id: 'chatgpt', name: 'ChatGPT' },
       { id: 'azure', name: 'Azure OpenAI' },
       { id: 'anthropic', name: 'Anthropic Claude' },
       { id: 'groq', name: 'Groq' },
@@ -254,7 +351,33 @@ class OpenAICompatibleAPI {
         'gpt-4-turbo',
         'gpt-3.5-turbo'
       ],
-      'azure': [], // Use deployment name
+      'chatgpt': [
+        'gpt-4o',
+        'gpt-4o-mini',
+        'gpt-4',
+        'gpt-4-turbo',
+        'gpt-3.5-turbo'
+      ],
+      'azure': [
+        'gpt-4o',
+        'gpt-4o-2024-11-20',
+        'gpt-4o-2024-08-06',
+        'gpt-4o-2024-05-13',
+        'gpt-4o-mini',
+        'gpt-4o-mini-2024-07-18',
+        'gpt-4',
+        'gpt-4-turbo-2024-04-09',
+        'gpt-4-0613',
+        'gpt-4-0314',
+        'gpt-4-32k',
+        'gpt-4-32k-0613',
+        'gpt-4-32k-0314',
+        'gpt-35-turbo',
+        'gpt-35-turbo-0125',
+        'gpt-35-turbo-1106',
+        'gpt-35-turbo-instruct',
+        'gpt-35-turbo-instruct-0914'
+      ],
       'anthropic': [
         'claude-3-5-sonnet-20241022',
         'claude-3-5-haiku-20241022',
@@ -285,9 +408,13 @@ class OpenAICompatibleAPI {
         endpoint: 'https://api.openai.com/v1',
         model: 'gpt-4o'
       },
+      'chatgpt': {
+        endpoint: 'https://api.openai.com/v1',
+        model: 'gpt-4o'
+      },
       'azure': {
         endpoint: '',
-        model: '',
+        model: 'gpt-4o',
         apiVersion: '2024-02-15-preview'
       },
       'anthropic': {

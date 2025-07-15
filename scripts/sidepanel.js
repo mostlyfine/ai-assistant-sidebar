@@ -3,7 +3,6 @@ class AIAssistant {
     this.configs = {
       'vertex-ai': null,
       'openai-compatible': null,
-      'chatgpt': null,
       'aws-bedrock': null
     };
     this.uiSettings = {
@@ -11,6 +10,7 @@ class AIAssistant {
       useShiftEnter: true,
       inputHeight: 80,
       defaultProvider: 'vertex-ai',
+      openaiCompatiblePreset: 'openai',
       includePageContent: false,
       includeSelectedText: false,
       language: i18n.getCurrentLanguage(),
@@ -18,6 +18,14 @@ class AIAssistant {
     };
     this.setupScreen = document.getElementById('setupScreen');
     this.chatScreen = document.getElementById('chatScreen');
+    
+    // DOM要素が存在するかチェック
+    if (!this.setupScreen) {
+      console.error('setupScreen element not found');
+    }
+    if (!this.chatScreen) {
+      console.error('chatScreen element not found');
+    }
     this.activeProvider = null;
     this.aiInstances = {};
     
@@ -25,7 +33,6 @@ class AIAssistant {
     this.chatHistories = {
       'vertex-ai': [],
       'openai-compatible': [],
-      'chatgpt': [],
       'aws-bedrock': []
     };
     
@@ -55,6 +62,7 @@ class AIAssistant {
         const secureConfigs = await window.securityManager.getSecure('aiConfigs');
         if (secureConfigs) {
           this.configs = { ...this.configs, ...secureConfigs };
+          await this.migrateChatGPTSettings();
           return;
         }
       }
@@ -63,6 +71,9 @@ class AIAssistant {
       const result = await chrome.storage.local.get(['aiConfigs']);
       if (result.aiConfigs) {
         this.configs = { ...this.configs, ...result.aiConfigs };
+        
+        // ChatGPT設定の移行
+        await this.migrateChatGPTSettings();
         
         // セキュアストレージに移行
         if (window.securityManager) {
@@ -137,6 +148,50 @@ class AIAssistant {
   }
 
   /**
+   * ChatGPT設定をOpenAI Compatible設定に移行
+   */
+  async migrateChatGPTSettings() {
+    try {
+      // ChatGPT設定が存在し、OpenAI Compatible設定が存在しない場合のみ移行
+      if (this.configs['chatgpt'] && !this.configs['openai-compatible']) {
+        const chatgptConfig = this.configs['chatgpt'];
+        
+        // ChatGPT設定をOpenAI Compatible設定に変換
+        const openaiCompatibleConfig = {
+          preset: 'chatgpt',
+          endpoint: 'https://api.openai.com/v1',
+          apiKey: chatgptConfig.apiKey,
+          model: chatgptConfig.model || 'gpt-4o',
+          organization: chatgptConfig.organization || null,
+          apiVersion: null,
+          deployment: null
+        };
+        
+        this.configs['openai-compatible'] = openaiCompatibleConfig;
+        
+        // デフォルトプロバイダーがchatgptの場合、openai-compatibleに変更
+        if (this.uiSettings.defaultProvider === 'chatgpt') {
+          this.uiSettings.defaultProvider = 'openai-compatible';
+          await this.saveUISettings();
+        }
+        
+        // 設定を保存
+        await this.saveConfigs();
+        
+        console.log('ChatGPT設定をOpenAI Compatible設定に移行しました');
+      }
+      
+      // ChatGPT設定を削除
+      if (this.configs['chatgpt']) {
+        delete this.configs['chatgpt'];
+        await this.saveConfigs();
+      }
+    } catch (error) {
+      console.error('ChatGPT設定の移行に失敗しました:', error);
+    }
+  }
+
+  /**
    * 設定値の検証
    */
   validateConfig(provider, config) {
@@ -153,7 +208,6 @@ class AIAssistant {
           break;
         
         case 'openai-compatible':
-        case 'chatgpt':
           if (config.apiKey) {
             window.securityManager.validateInput('apiKey', config.apiKey);
           }
@@ -208,7 +262,15 @@ class AIAssistant {
       const key = element.getAttribute('data-i18n');
       const text = i18n.t(key);
       if (text) {
-        element.textContent = text;
+        // For buttons with icons, preserve the icon and update text
+        if (element.tagName === 'BUTTON' && element.querySelector('img')) {
+          const img = element.querySelector('img');
+          const imgClone = img.cloneNode(true);
+          element.textContent = text;
+          element.insertBefore(imgClone, element.firstChild);
+        } else {
+          element.textContent = text;
+        }
       }
     });
 
@@ -250,10 +312,25 @@ class AIAssistant {
     const defaults = OpenAICompatibleAPI.getPresetDefaults(preset);
     const models = OpenAICompatibleAPI.getPresetModels(preset);
     
+    // Get preset configuration to check if endpoint is fixed
+    const presetConfig = new OpenAICompatibleAPI({ preset }).getPresetConfig();
+    const hasFixedEndpoint = presetConfig.fixedEndpoint;
+    
+    // Show/hide endpoint input based on preset
+    const endpointGroup = document.getElementById('openaiEndpoint').parentElement;
+    endpointGroup.style.display = hasFixedEndpoint ? 'none' : 'block';
+    
     // Set endpoint only if current value is empty
     const endpointInput = document.getElementById('openaiEndpoint');
     if (!endpointInput.value) {
       endpointInput.value = defaults.endpoint;
+    }
+    
+    // Set appropriate placeholder based on preset
+    if (preset === 'azure') {
+      endpointInput.placeholder = i18n.t('placeholderAzureEndpoint');
+    } else {
+      endpointInput.placeholder = i18n.t('placeholderOpenAIEndpoint');
     }
     
     // Update model options
@@ -279,6 +356,10 @@ class AIAssistant {
     const customModelInput = document.getElementById('customModelInput');
     customModelInput.style.display = (preset === 'custom' || preset === 'ollama') ? 'block' : 'none';
     
+    // Show/hide organization input for ChatGPT
+    const organizationInput = document.getElementById('organizationInput');
+    organizationInput.style.display = preset === 'chatgpt' ? 'block' : 'none';
+    
     // Set default values for Azure only if current value is empty
     if (preset === 'azure' && defaults.apiVersion) {
       const azureApiVersionInput = document.getElementById('azureApiVersion');
@@ -291,98 +372,201 @@ class AIAssistant {
   setupEventListeners() {
     // Tab navigation
     document.querySelectorAll('.tab-button').forEach(button => {
-      button.addEventListener('click', (e) => {
-        this.switchTab(e.target.dataset.tab);
-      });
+      if (button) {
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Get tab name from the clicked element or its parent
+          let tabName = e.target.dataset.tab;
+          if (!tabName && e.target.parentElement) {
+            tabName = e.target.parentElement.dataset.tab;
+          }
+          if (!tabName && e.target.closest('.tab-button')) {
+            tabName = e.target.closest('.tab-button').dataset.tab;
+          }
+          
+          if (tabName) {
+            this.switchTab(tabName);
+          } else {
+            console.error('Tab name not found for clicked element:', e.target);
+          }
+        });
+      }
     });
 
     // Vertex AI authentication method switching
     document.querySelectorAll('input[name="vertexAuthMethod"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        this.switchVertexAuthMethod(e.target.value);
-      });
-    });
-
-    // Vertex AI settings
-    document.getElementById('selectFileButton').addEventListener('click', () => {
-      document.getElementById('serviceAccountFile').click();
-    });
-
-    document.getElementById('serviceAccountFile').addEventListener('change', async (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        await this.handleServiceAccountFile(file);
+      if (radio) {
+        radio.addEventListener('change', (e) => {
+          this.switchVertexAuthMethod(e.target.value);
+        });
       }
     });
 
+    // Vertex AI settings
+    const selectFileButton = document.getElementById('selectFileButton');
+    if (selectFileButton) {
+      selectFileButton.addEventListener('click', () => {
+        const serviceAccountFile = document.getElementById('serviceAccountFile');
+        if (serviceAccountFile) {
+          serviceAccountFile.click();
+        }
+      });
+    }
+
+    const serviceAccountFile = document.getElementById('serviceAccountFile');
+    if (serviceAccountFile) {
+      serviceAccountFile.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          await this.handleServiceAccountFile(file);
+        }
+      });
+    }
+
     // Settings save button
-    document.getElementById('saveConfig').addEventListener('click', async () => {
-      await this.saveAllConfigs();
-    });
+    const saveConfig = document.getElementById('saveConfig');
+    if (saveConfig) {
+      saveConfig.addEventListener('click', async () => {
+        await this.saveAllConfigs();
+      });
+    }
 
     // Cancel button
-    document.getElementById('cancelConfig').addEventListener('click', () => {
-      this.cancelSettings();
-    });
+    const cancelConfig = document.getElementById('cancelConfig');
+    if (cancelConfig) {
+      cancelConfig.addEventListener('click', () => {
+        this.cancelSettings();
+      });
+    }
 
     // Settings button
-    document.getElementById('settingsButton').addEventListener('click', () => {
-      this.showSetupScreen();
-    });
+    const settingsButton = document.getElementById('settingsButton');
+    if (settingsButton) {
+      settingsButton.addEventListener('click', () => {
+        this.showSetupScreen();
+      });
+    }
 
     // Message sending
     const sendButton = document.getElementById('sendButton');
-    sendButton.addEventListener('click', () => this.sendMessage());
+    if (sendButton) {
+      sendButton.addEventListener('click', () => this.sendMessage());
+    }
     
     // Save checkbox states
-    document.getElementById('includePageContent').addEventListener('change', () => {
-      this.saveCheckboxStates();
-    });
+    const includePageContent = document.getElementById('includePageContent');
+    if (includePageContent) {
+      includePageContent.addEventListener('change', () => {
+        this.saveCheckboxStates();
+      });
+    }
 
-    document.getElementById('includeSelectedText').addEventListener('change', () => {
-      this.saveCheckboxStates();
-    });
+    const includeSelectedText = document.getElementById('includeSelectedText');
+    if (includeSelectedText) {
+      includeSelectedText.addEventListener('change', () => {
+        this.saveCheckboxStates();
+      });
+    }
     
     // Language selection
-    document.getElementById('language').addEventListener('change', (e) => {
-      this.changeLanguage(e.target.value);
-    });
+    const language = document.getElementById('language');
+    if (language) {
+      language.addEventListener('change', (e) => {
+        this.changeLanguage(e.target.value);
+      });
+    }
     
     // OpenAI Compatible preset selection
-    document.getElementById('openaiPreset').addEventListener('change', (e) => {
-      this.updateOpenAICompatibleUI(e.target.value);
-    });
+    const openaiPreset = document.getElementById('openaiPreset');
+    if (openaiPreset) {
+      openaiPreset.addEventListener('change', (e) => {
+        this.updateOpenAICompatibleUI(e.target.value);
+      });
+    }
+    
+    // Default provider selection
+    const defaultProvider = document.getElementById('defaultProvider');
+    if (defaultProvider) {
+      defaultProvider.addEventListener('change', (e) => {
+        this.toggleOpenAICompatiblePresetUI();
+      });
+    }
     
     // Export buttons
-    document.getElementById('exportAllHistory').addEventListener('click', () => {
-      this.exportAllHistory();
-    });
+    const exportAllHistory = document.getElementById('exportAllHistory');
+    if (exportAllHistory) {
+      exportAllHistory.addEventListener('click', () => {
+        this.exportAllHistory();
+      });
+    }
     
-    document.getElementById('exportCurrentHistory').addEventListener('click', () => {
-      this.exportCurrentHistory();
-    });
+    const exportCurrentHistory = document.getElementById('exportCurrentHistory');
+    if (exportCurrentHistory) {
+      exportCurrentHistory.addEventListener('click', () => {
+        this.exportCurrentHistory();
+      });
+    }
     
     // Clear logs button
-    document.getElementById('clearLogsButton').addEventListener('click', () => {
-      this.showClearLogsDialog();
-    });
+    const clearLogsButton = document.getElementById('clearLogsButton');
+    if (clearLogsButton) {
+      clearLogsButton.addEventListener('click', () => {
+        this.showClearLogsDialog();
+      });
+    }
     
     // Keyboard events are set dynamically
     this.setupKeyboardEvents();
   }
 
   switchTab(tabName) {
+    if (!tabName) {
+      console.error('switchTab: tabName is required');
+      return;
+    }
+    
     // Update tab button states
-    document.querySelectorAll('.tab-button').forEach(btn => {
-      btn.classList.remove('active');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    if (tabButtons.length === 0) {
+      console.error('switchTab: No tab buttons found');
+      return;
+    }
+    
+    tabButtons.forEach(btn => {
+      if (btn && btn.classList) {
+        btn.classList.remove('active');
+      }
     });
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
+    
+    const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+    if (tabButton && tabButton.classList) {
+      tabButton.classList.add('active');
+    } else {
+      console.error(`switchTab: Tab button not found for ${tabName}`);
+    }
+    
     // Switch tab content display
-    document.querySelectorAll('.tab-content').forEach(content => {
-      content.classList.remove('active');
+    const tabContents = document.querySelectorAll('.tab-content');
+    if (tabContents.length === 0) {
+      console.error('switchTab: No tab contents found');
+      return;
+    }
+    
+    tabContents.forEach(content => {
+      if (content && content.classList) {
+        content.classList.remove('active');
+      }
     });
-    document.getElementById(`${tabName}-tab`).classList.add('active');
+    
+    const tabContent = document.getElementById(`${tabName}-tab`);
+    if (tabContent && tabContent.classList) {
+      tabContent.classList.add('active');
+      console.log(`switchTab: Successfully switched to ${tabName}`);
+    } else {
+      console.error(`switchTab: Tab content not found for ${tabName}-tab`);
+    }
   }
 
   switchVertexAuthMethod(method) {
@@ -488,15 +672,40 @@ class AIAssistant {
     const customModel = document.getElementById('customModel').value;
     const azureApiVersion = document.getElementById('azureApiVersion').value;
     const azureDeployment = document.getElementById('azureDeployment').value;
+    const organizationId = document.getElementById('organizationId').value;
 
     // OpenAI Compatible settings validation
     let openaiConfigValid = false;
     if (openaiPreset === 'azure') {
       // Azure validation: endpoint, API key, and deployment name required
       openaiConfigValid = openaiEndpoint && openaiApiKey && azureDeployment;
+      if (!openaiConfigValid) {
+        if (!openaiEndpoint) {
+          alert('Azure OpenAI: エンドポイントURL（例：https://yourresource.openai.azure.com）を入力してください。');
+          return;
+        }
+        if (!openaiApiKey) {
+          alert('Azure OpenAI: APIキーを入力してください。');
+          return;
+        }
+        if (!azureDeployment) {
+          alert('Azure OpenAI: デプロイメント名を入力してください。');
+          return;
+        }
+      }
     } else {
       // Other provider validation: endpoint and API key required
       openaiConfigValid = openaiEndpoint && openaiApiKey;
+      if (!openaiConfigValid) {
+        if (!openaiEndpoint) {
+          alert('OpenAI Compatible: エンドポイントURLを入力してください。');
+          return;
+        }
+        if (!openaiApiKey) {
+          alert('OpenAI Compatible: APIキーを入力してください。');
+          return;
+        }
+      }
     }
 
     if (openaiConfigValid) {
@@ -517,14 +726,14 @@ class AIAssistant {
         apiKey: openaiApiKey,
         model: model,
         apiVersion: azureApiVersion,
-        deployment: azureDeployment
+        deployment: azureDeployment,
+        organization: organizationId || null
       };
       
       // Validate OpenAI Compatible config
       try {
         this.validateConfig('openai-compatible', openaiConfig);
         this.configs['openai-compatible'] = openaiConfig;
-        console.log('OpenAI Compatible config saved:', this.configs['openai-compatible']);
       } catch (error) {
         alert(i18n.t('errorValidatingOpenAI') + ': ' + error.message);
         return;
@@ -539,27 +748,6 @@ class AIAssistant {
       });
     }
 
-    // ChatGPT settings
-    const chatgptApiKey = document.getElementById('chatgptApiKey').value;
-    const chatgptModel = document.getElementById('chatgptModel').value;
-    const chatgptOrganization = document.getElementById('chatgptOrganization').value;
-
-    if (chatgptApiKey) {
-      const chatgptConfig = {
-        apiKey: chatgptApiKey,
-        model: chatgptModel,
-        organization: chatgptOrganization || null
-      };
-      
-      // Validate ChatGPT config
-      try {
-        this.validateConfig('chatgpt', chatgptConfig);
-        this.configs['chatgpt'] = chatgptConfig;
-      } catch (error) {
-        alert(i18n.t('errorValidatingChatGPT') + ': ' + error.message);
-        return;
-      }
-    }
 
     // AWS Bedrock settings
     const awsAccessKeyId = document.getElementById('awsAccessKeyId').value;
@@ -592,6 +780,7 @@ class AIAssistant {
       fontSize: document.getElementById('fontSize').value,
       useShiftEnter: document.getElementById('useShiftEnter').checked,
       defaultProvider: document.getElementById('defaultProvider').value,
+      openaiCompatiblePreset: document.getElementById('openaiCompatiblePreset').value,
       inputHeight: this.uiSettings.inputHeight,
       includePageContent: document.getElementById('includePageContent').checked,
       includeSelectedText: document.getElementById('includeSelectedText').checked,
@@ -637,8 +826,6 @@ class AIAssistant {
           return config.deployment && config.apiVersion;
         }
         return config.model;
-      case 'chatgpt':
-        return config && config.apiKey;
       case 'aws-bedrock':
         return config && config.accessKeyId && config.secretAccessKey && config.region;
       default:
@@ -647,13 +834,18 @@ class AIAssistant {
   }
 
   updateChatTitle() {
-    const titles = {
-      'vertex-ai': '🔷 Vertex AI',
-      'openai-compatible': '🔵 OpenAI Compatible',
-      'chatgpt': '🟢 ChatGPT',
-      'aws-bedrock': '🟠 AWS Bedrock'
+    const titleData = {
+      'vertex-ai': { name: 'Vertex AI', icon: 'icons/vertex.png' },
+      'openai-compatible': { name: 'OpenAI Compatible', icon: 'icons/openai.png' },
+      'aws-bedrock': { name: 'AWS Bedrock', icon: 'icons/bedrock.png' }
     };
-    document.getElementById('chatTitle').textContent = titles[this.activeProvider] || 'AI Assistant';
+    const data = titleData[this.activeProvider];
+    const chatTitle = document.getElementById('chatTitle');
+    if (data) {
+      chatTitle.innerHTML = `<img src="${data.icon}" alt="${data.name}" class="chat-title-icon"> ${data.name}`;
+    } else {
+      chatTitle.textContent = 'AI Assistant';
+    }
   }
 
   showAppropriateScreen() {
@@ -665,6 +857,28 @@ class AIAssistant {
     } else {
       this.showSetupScreen();
       this.restoreSettings();
+      // Initialize first tab to ensure proper display
+      this.initializeDefaultTab();
+    }
+  }
+
+  initializeDefaultTab() {
+    // Ensure at least one tab is active when showing setup screen
+    const activeTab = document.querySelector('.tab-button.active');
+    if (!activeTab) {
+      const firstTab = document.querySelector('.tab-button');
+      if (firstTab && firstTab.dataset.tab) {
+        this.switchTab(firstTab.dataset.tab);
+      }
+    }
+    
+    // Ensure corresponding tab content is visible
+    const activeContent = document.querySelector('.tab-content.active');
+    if (!activeContent) {
+      const activeTabButton = document.querySelector('.tab-button.active');
+      if (activeTabButton && activeTabButton.dataset.tab) {
+        this.switchTab(activeTabButton.dataset.tab);
+      }
     }
   }
 
@@ -697,6 +911,7 @@ class AIAssistant {
     // OpenAI Compatible settings restoration
     if (this.configs['openai-compatible']) {
       const config = this.configs['openai-compatible'];
+      
       document.getElementById('openaiPreset').value = config.preset || 'openai';
       
       // UI update on preset change (before setting values)
@@ -707,6 +922,7 @@ class AIAssistant {
       document.getElementById('openaiApiKey').value = config.apiKey || '';
       document.getElementById('azureApiVersion').value = config.apiVersion || '2024-02-15-preview';
       document.getElementById('azureDeployment').value = config.deployment || '';
+      document.getElementById('organizationId').value = config.organization || '';
       
       // Model settings restoration (executed after UI update)
       if (config.preset === 'azure') {
@@ -721,13 +937,6 @@ class AIAssistant {
       }
     }
 
-    // Restore ChatGPT settings
-    if (this.configs['chatgpt']) {
-      const config = this.configs['chatgpt'];
-      document.getElementById('chatgptApiKey').value = config.apiKey || '';
-      document.getElementById('chatgptModel').value = config.model || 'gpt-4o';
-      document.getElementById('chatgptOrganization').value = config.organization || '';
-    }
 
     // Restore AWS Bedrock settings
     if (this.configs['aws-bedrock']) {
@@ -767,8 +976,12 @@ class AIAssistant {
     
     document.getElementById('useShiftEnter').checked = this.uiSettings.useShiftEnter;
     document.getElementById('defaultProvider').value = this.uiSettings.defaultProvider;
+    document.getElementById('openaiCompatiblePreset').value = this.uiSettings.openaiCompatiblePreset || 'openai';
     document.getElementById('language').value = this.uiSettings.language;
     document.getElementById('customInstructionsText').value = this.uiSettings.customInstructions || '';
+    
+    // Show/hide OpenAI Compatible preset selection
+    this.toggleOpenAICompatiblePresetUI();
     
     // Restore checkbox states
     document.getElementById('includePageContent').checked = this.uiSettings.includePageContent;
@@ -776,13 +989,21 @@ class AIAssistant {
   }
 
   showSetupScreen() {
-    this.setupScreen.classList.remove('hidden');
-    this.chatScreen.classList.add('hidden');
+    if (this.setupScreen) {
+      this.setupScreen.classList.remove('hidden');
+    }
+    if (this.chatScreen) {
+      this.chatScreen.classList.add('hidden');
+    }
   }
 
   showChatScreen() {
-    this.setupScreen.classList.add('hidden');
-    this.chatScreen.classList.remove('hidden');
+    if (this.setupScreen) {
+      this.setupScreen.classList.add('hidden');
+    }
+    if (this.chatScreen) {
+      this.chatScreen.classList.remove('hidden');
+    }
   }
 
   cancelSettings() {
@@ -802,12 +1023,44 @@ class AIAssistant {
     }
   }
 
+  toggleOpenAICompatiblePresetUI() {
+    const defaultProvider = document.getElementById('defaultProvider').value;
+    const presetGroup = document.getElementById('openaiCompatiblePresetGroup');
+    
+    if (presetGroup) {
+      presetGroup.style.display = defaultProvider === 'openai-compatible' ? 'block' : 'none';
+    }
+  }
+
   setupKeyboardEvents() {
     const messageInput = document.getElementById('messageInput');
+    if (!messageInput) {
+      console.error('messageInput element not found');
+      return;
+    }
     
-    // Remove existing event listener before adding
+    // Remove existing event listeners before adding
     messageInput.removeEventListener('keydown', this.keydownHandler);
+    messageInput.removeEventListener('compositionstart', this.compositionStartHandler);
+    messageInput.removeEventListener('compositionend', this.compositionEndHandler);
+    
+    // Track IME composition state
+    this.isComposing = false;
+    
+    this.compositionStartHandler = () => {
+      this.isComposing = true;
+    };
+    
+    this.compositionEndHandler = () => {
+      this.isComposing = false;
+    };
+    
     this.keydownHandler = (event) => {
+      // Don't send message if IME is composing
+      if (this.isComposing) {
+        return;
+      }
+      
       if (this.uiSettings.useShiftEnter) {
         if (event.key === 'Enter' && event.shiftKey) {
           event.preventDefault();
@@ -820,7 +1073,10 @@ class AIAssistant {
         }
       }
     };
+    
     messageInput.addEventListener('keydown', this.keydownHandler);
+    messageInput.addEventListener('compositionstart', this.compositionStartHandler);
+    messageInput.addEventListener('compositionend', this.compositionEndHandler);
     
     // Update placeholder text
     const placeholder = this.uiSettings.useShiftEnter 
@@ -932,8 +1188,6 @@ class AIAssistant {
         return await this.callVertexAI(message, config, customInstructions);
       case 'openai-compatible':
         return await this.callOpenAICompatible(message, config, customInstructions);
-      case 'chatgpt':
-        return await this.callChatGPT(message, config, customInstructions);
       case 'aws-bedrock':
         return await this.callAWSBedrock(message, config, customInstructions);
       default:
@@ -966,20 +1220,31 @@ class AIAssistant {
 
   async callOpenAICompatible(message, config, customInstructions) {
     if (!this.aiInstances['openai-compatible']) {
-      this.aiInstances['openai-compatible'] = new OpenAICompatibleAPI(config);
+      // デフォルトプロバイダーでOpenAI Compatibleを使用する場合、プリセット設定を適用
+      const activeConfig = this.getActiveOpenAICompatibleConfig(config);
+      this.aiInstances['openai-compatible'] = new OpenAICompatibleAPI(activeConfig);
     }
     return await this.aiInstances['openai-compatible'].sendMessage(message, customInstructions);
   }
 
-  async callChatGPT(message, config, customInstructions) {
-    if (!this.aiInstances['chatgpt']) {
-      this.aiInstances['chatgpt'] = new ChatGPTAPI(
-        config.apiKey,
-        config.model,
-        config.organization
-      );
+  getActiveOpenAICompatibleConfig(config) {
+    // デフォルトプロバイダーでOpenAI Compatibleを使用する場合、プリセット設定を適用
+    if (this.activeProvider === this.uiSettings.defaultProvider && this.uiSettings.defaultProvider === 'openai-compatible') {
+      const selectedPreset = this.uiSettings.openaiCompatiblePreset || 'openai';
+      const presetDefaults = OpenAICompatibleAPI.getPresetDefaults(selectedPreset);
+      
+      // プリセット設定を適用してconfigをマージ
+      // ただし、Azure OpenAI等でエンドポイントが必要な場合は、保存された設定を優先
+      return {
+        ...config,
+        preset: selectedPreset,
+        endpoint: config.endpoint || presetDefaults.endpoint,
+        model: config.model || presetDefaults.model
+      };
     }
-    return await this.aiInstances['chatgpt'].sendMessage(message, customInstructions);
+    
+    // 通常のOpenAI Compatible設定タブから使用する場合は、元の設定をそのまま使用
+    return config;
   }
 
   async callAWSBedrock(message, config, customInstructions) {
@@ -1025,18 +1290,120 @@ class AIAssistant {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
+  // Markdown parsing method using marked library directly
+  parseMarkdown(text) {
+    if (!text || typeof text !== 'string') return '';
+    
+    // markedライブラリを使用してMarkdownをHTMLに変換
+    if (typeof marked !== 'undefined' && (marked.parse || marked.marked)) {
+      try {
+        // markedの設定
+        if (marked.setOptions) {
+          marked.setOptions({
+            breaks: true,
+            gfm: true,
+            sanitize: false,
+            pedantic: false,
+            smartLists: true,
+            smartypants: false,
+            xhtml: false
+          });
+        }
+        
+        // レンダラーをカスタマイズ
+        let renderer = null;
+        if (marked.Renderer) {
+          renderer = new marked.Renderer();
+          
+          // リンクを新しいタブで開く
+          renderer.link = function(href, title, text) {
+            const titleAttr = title ? ` title="${title}"` : '';
+            return `<a href="${href}" target="_blank"${titleAttr}>${text}</a>`;
+          };
+          
+          // チェックボックスをdisabledにする
+          renderer.checkbox = function(checked) {
+            return `<input type="checkbox" disabled${checked ? ' checked' : ''}> `;
+          };
+          
+          // コードブロックの言語クラスを追加
+          renderer.code = function(code, lang) {
+            const language = lang || '';
+            return `<pre><code class="language-${language}">${code}</code></pre>`;
+          };
+        }
+        
+        // markedを実行 (parse または marked 関数を使用)
+        const parseFunction = marked.parse || marked.marked || marked;
+        const options = renderer ? { renderer: renderer } : {};
+        const result = parseFunction(text, options);
+        
+        // DOMPurifyを使用してHTMLをサニタイズ
+        if (typeof DOMPurify !== 'undefined') {
+          return DOMPurify.sanitize(result, {
+            ALLOWED_TAGS: [
+              'p', 'br', 'strong', 'em', 'u', 'code', 'pre', 'span',
+              'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+              'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+              'a', 'blockquote', 'hr',
+              'table', 'thead', 'tbody', 'tr', 'th', 'td',
+              'input', 'del', 'ins'
+            ],
+            ALLOWED_ATTR: [
+              'href', 'target', 'class', 'type', 'checked', 'disabled',
+              'title', 'alt', 'rel'
+            ],
+            ALLOW_DATA_ATTR: false,
+            FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+            FORBID_ATTR: ['onclick', 'onload', 'onerror', 'onmouseover'],
+            ADD_ATTR: ['target'],
+            ADD_TAGS: []
+          });
+        } else {
+          // DOMPurifyが利用できない場合は、markedの結果をそのまま使用
+          console.warn('DOMPurify is not available, using marked result without sanitization');
+          return result;
+        }
+      } catch (error) {
+        console.error('Marked parsing error:', error);
+        // エラーの場合はフォールバック処理
+        return this.fallbackParseMarkdown(text);
+      }
+    } else {
+      // markedが利用できない場合はフォールバック処理
+      return this.fallbackParseMarkdown(text);
+    }
+  }
+
+  // フォールバック: 基本的なHTMLエスケープのみ
+  fallbackParseMarkdown(text) {
+    if (!text || typeof text !== 'string') return '';
+    
+    // HTMLエスケープ
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+    
+    // 改行を<br>に変換
+    return escaped.replace(/\n/g, '<br>');
+  }
+
   addAIMessage(message) {
     const timestamp = new Date();
     const timeString = timestamp.toLocaleTimeString();
     
-    // Get AI provider name
-    const providerNames = {
-      'vertex-ai': '🔷 Vertex AI',
-      'openai-compatible': '🔵 OpenAI Compatible',
-      'chatgpt': '🟢 ChatGPT',
-      'aws-bedrock': '🟠 AWS Bedrock'
+    // Get AI provider data
+    const providerData = {
+      'vertex-ai': { name: 'Vertex AI', icon: 'icons/vertex.png' },
+      'openai-compatible': { name: 'OpenAI Compatible', icon: 'icons/openai.png' },
+      'aws-bedrock': { name: 'AWS Bedrock', icon: 'icons/bedrock.png' }
     };
-    const providerName = providerNames[this.activeProvider] || 'AI';
+    const provider = providerData[this.activeProvider];
+    const providerName = provider ? provider.name : 'AI';
+    const providerIcon = provider ? provider.icon : '';
     
     // Save to chat history
     if (this.activeProvider) {
@@ -1056,14 +1423,31 @@ class AIAssistant {
     const messageElement = document.createElement('div');
     messageElement.className = 'message ai-message';
     
-    const formattedContent = MarkdownParser.parse(message);
+    const formattedContent = this.parseMarkdown(message);
     
-    messageElement.innerHTML = `
-      <div class="message-content">
-        <div class="message-text">${formattedContent}</div>
-        <div class="message-time">${providerName} • ${timeString}</div>
-      </div>
-    `;
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
+    
+    const messageText = document.createElement('div');
+    messageText.className = 'message-text';
+    messageText.innerHTML = formattedContent;
+    
+    const messageTime = document.createElement('div');
+    messageTime.className = 'message-time';
+    
+    if (providerIcon) {
+      const providerImg = document.createElement('img');
+      providerImg.src = providerIcon;
+      providerImg.alt = providerName;
+      providerImg.className = 'message-provider-icon';
+      messageTime.appendChild(providerImg);
+    }
+    
+    messageTime.appendChild(document.createTextNode(`${providerName} • ${timeString}`));
+    
+    messageContent.appendChild(messageText);
+    messageContent.appendChild(messageTime);
+    messageElement.appendChild(messageContent);
     messagesContainer.appendChild(messageElement);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
@@ -1089,19 +1473,20 @@ class AIAssistant {
     messageElement.id = messageId;
     messageElement.className = 'message ai-message loading-message';
     
-    const providerNames = {
-      'vertex-ai': '🔷 Vertex AI',
-      'openai-compatible': '🔵 OpenAI Compatible',
-      'chatgpt': '🟢 ChatGPT',
-      'aws-bedrock': '🟠 AWS Bedrock'
+    const providerData = {
+      'vertex-ai': { name: 'Vertex AI', icon: 'icons/vertex.png' },
+      'openai-compatible': { name: 'OpenAI Compatible', icon: 'icons/openai.png' },
+      'aws-bedrock': { name: 'AWS Bedrock', icon: 'icons/bedrock.png' }
     };
-    const providerName = providerNames[this.activeProvider] || 'AI';
+    const provider = providerData[this.activeProvider];
+    const providerName = provider ? provider.name : 'AI';
+    const providerIcon = provider ? provider.icon : '';
     
     messageElement.innerHTML = `
       <div class="message-content">
         <div class="message-text loading-content">
           <div class="loading-spinner"></div>
-          <span>${providerName}${i18n.t('loadingGenerating')}<span class="loading-dots">${i18n.t('loadingDots')}</span></span>
+          <span>${providerIcon ? `<img src="${providerIcon}" alt="${providerName}" class="message-provider-icon">` : ''}${providerName}${i18n.t('loadingGenerating')}<span class="loading-dots">${i18n.t('loadingDots')}</span></span>
         </div>
       </div>
     `;
@@ -1123,13 +1508,13 @@ class AIAssistant {
     const sendButton = document.getElementById('sendButton');
     
     if (isLoading) {
-      sendIcon.classList.add('hidden');
-      loadingIcon.classList.remove('hidden');
-      sendButton.disabled = true;
+      if (sendIcon) sendIcon.classList.add('hidden');
+      if (loadingIcon) loadingIcon.classList.remove('hidden');
+      if (sendButton) sendButton.disabled = true;
     } else {
-      sendIcon.classList.remove('hidden');
-      loadingIcon.classList.add('hidden');
-      sendButton.disabled = false;
+      if (sendIcon) sendIcon.classList.remove('hidden');
+      if (loadingIcon) loadingIcon.classList.add('hidden');
+      if (sendButton) sendButton.disabled = false;
     }
   }
 
@@ -1148,7 +1533,6 @@ class AIAssistant {
       const providerNames = {
         'vertex-ai': 'Vertex AI',
         'openai-compatible': 'OpenAI Compatible',
-        'chatgpt': 'ChatGPT',
         'aws-bedrock': 'AWS Bedrock'
       };
       
@@ -1206,7 +1590,6 @@ class AIAssistant {
       const providerNames = {
         'vertex-ai': 'Vertex AI',
         'openai-compatible': 'OpenAI Compatible',
-        'chatgpt': 'ChatGPT',
         'aws-bedrock': 'AWS Bedrock'
       };
       
@@ -1614,7 +1997,9 @@ class GeminiAPI {
 }
 
 // Application start
-const app = new AIAssistant();
+document.addEventListener('DOMContentLoaded', function() {
+  const app = new AIAssistant();
+});
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = AIAssistant;

@@ -9,11 +9,11 @@ class I18n {
         setupTitle: 'AI APIを設定してください',
         
         // Tab names
-        tabVertexAI: '🔷 Vertex AI',
-        tabOpenAICompatible: '🔵 OpenAI Compatible',
-        tabChatGPT: '🟢 ChatGPT',
-        tabAWSBedrock: '🟠 AWS Bedrock',
-        tabGeneral: '⚙️ 全体設定',
+        tabVertexAI: 'Vertex AI',
+        tabOpenAICompatible: 'OpenAI Compatible',
+        tabChatGPT: 'ChatGPT',
+        tabAWSBedrock: 'AWS Bedrock',
+        tabGeneral: '全体設定',
         
         // Vertex AI settings
         vertexAISettings: 'Vertex AI 設定',
@@ -78,6 +78,7 @@ class I18n {
         placeholderGoogleCloudProjectId: 'Google Cloud Project ID',
         placeholderVertexApiKey: 'Vertex AI API Key',
         placeholderOpenAIEndpoint: 'https://api.openai.com/v1',
+        placeholderAzureEndpoint: 'https://yourresource.openai.azure.com',
         placeholderOpenAIApiKey: 'API キー',
         placeholderDeploymentName: 'デプロイメント名',
         placeholderCustomModel: 'カスタムモデル名',
@@ -153,11 +154,11 @@ class I18n {
         setupTitle: 'Please configure AI API',
         
         // Tab names
-        tabVertexAI: '🔷 Vertex AI',
-        tabOpenAICompatible: '🔵 OpenAI Compatible',
-        tabChatGPT: '🟢 ChatGPT',
-        tabAWSBedrock: '🟠 AWS Bedrock',
-        tabGeneral: '⚙️ General Settings',
+        tabVertexAI: 'Vertex AI',
+        tabOpenAICompatible: 'OpenAI Compatible',
+        tabChatGPT: 'ChatGPT',
+        tabAWSBedrock: 'AWS Bedrock',
+        tabGeneral: 'General Settings',
         
         // Vertex AI settings
         vertexAISettings: 'Vertex AI Settings',
@@ -222,6 +223,7 @@ class I18n {
         placeholderGoogleCloudProjectId: 'Google Cloud Project ID',
         placeholderVertexApiKey: 'Vertex AI API Key',
         placeholderOpenAIEndpoint: 'https://api.openai.com/v1',
+        placeholderAzureEndpoint: 'https://yourresource.openai.azure.com',
         placeholderOpenAIApiKey: 'API Key',
         placeholderDeploymentName: 'Deployment Name',
         placeholderCustomModel: 'Custom Model Name',

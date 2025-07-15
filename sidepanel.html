@@ -17,11 +17,10 @@
       
       <!-- タブナビゲーション -->
       <div class="tab-navigation">
-        <button class="tab-button active" data-tab="vertex-ai" data-i18n="tabVertexAI">🔷 Vertex AI</button>
-        <button class="tab-button" data-tab="openai-compatible" data-i18n="tabOpenAICompatible">🔵 OpenAI Compatible</button>
-        <button class="tab-button" data-tab="chatgpt" data-i18n="tabChatGPT">🟢 ChatGPT</button>
-        <button class="tab-button" data-tab="aws-bedrock" data-i18n="tabAWSBedrock">🟠 AWS Bedrock</button>
-        <button class="tab-button" data-tab="general" data-i18n="tabGeneral">⚙️ 全体設定</button>
+        <button class="tab-button active" data-tab="vertex-ai" data-i18n="tabVertexAI"><img src="icons/vertex.png" alt="Vertex AI" class="tab-icon"><span>Vertex AI</span></button>
+        <button class="tab-button" data-tab="openai-compatible" data-i18n="tabOpenAICompatible"><img src="icons/openai.png" alt="OpenAI" class="tab-icon"><span>OpenAI Compatible</span></button>
+        <button class="tab-button" data-tab="aws-bedrock" data-i18n="tabAWSBedrock"><img src="icons/bedrock.png" alt="AWS Bedrock" class="tab-icon"><span>AWS Bedrock</span></button>
+        <button class="tab-button" data-tab="general" data-i18n="tabGeneral"><img src="icons/setting.png" alt="設定" class="tab-icon"><span>全体設定</span></button>
       </div>
 
       <!-- Vertex AI設定タブ -->
@@ -122,6 +121,7 @@
           <label for="openaiPreset" data-i18n="preset">プリセット</label>
           <select id="openaiPreset">
             <option value="openai">OpenAI</option>
+            <option value="chatgpt">ChatGPT</option>
             <option value="azure">Azure OpenAI</option>
             <option value="anthropic">Anthropic Claude</option>
             <option value="groq">Groq</option>
@@ -176,30 +176,14 @@
           <label for="customModel" data-i18n="customModel">カスタムモデル</label>
           <input type="text" id="customModel" data-i18n-placeholder="placeholderCustomModel">
         </div>
+        
+        <!-- ChatGPT用Organization ID -->
+        <div id="organizationInput" class="input-group" style="display: none;">
+          <label for="organizationId" data-i18n="organizationId">Organization ID (オプション)</label>
+          <input type="text" id="organizationId" data-i18n-placeholder="placeholderOrganizationId">
+        </div>
       </div>
 
-      <!-- ChatGPT設定タブ -->
-      <div id="chatgpt-tab" class="tab-content">
-        <h3 data-i18n="chatGPTSettings">ChatGPT API 設定</h3>
-        <div class="input-group">
-          <label for="chatgptApiKey" data-i18n="apiKey">API キー</label>
-          <input type="password" id="chatgptApiKey" data-i18n-placeholder="placeholderOpenAIApiKey">
-        </div>
-        <div class="input-group">
-          <label for="chatgptModel" data-i18n="model">モデル</label>
-          <select id="chatgptModel">
-            <option value="gpt-4o">GPT-4o</option>
-            <option value="gpt-4o-mini">GPT-4o mini</option>
-            <option value="gpt-4">GPT-4</option>
-            <option value="gpt-4-turbo">GPT-4 Turbo</option>
-            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <label for="chatgptOrganization" data-i18n="organizationId">Organization ID (オプション)</label>
-          <input type="text" id="chatgptOrganization" data-i18n-placeholder="placeholderOrganizationId">
-        </div>
-      </div>
 
       <!-- AWS Bedrock設定タブ -->
       <div id="aws-bedrock-tab" class="tab-content">
@@ -254,8 +238,22 @@
           <select id="defaultProvider">
             <option value="vertex-ai">Vertex AI</option>
             <option value="openai-compatible">OpenAI Compatible</option>
-            <option value="chatgpt">ChatGPT</option>
             <option value="aws-bedrock">AWS Bedrock</option>
+          </select>
+        </div>
+        
+        <!-- OpenAI Compatible プリセット選択 -->
+        <div class="input-group" id="openaiCompatiblePresetGroup" style="display: none;">
+          <label for="openaiCompatiblePreset" data-i18n="openaiCompatiblePreset">OpenAI Compatible プリセット</label>
+          <select id="openaiCompatiblePreset">
+            <option value="openai">OpenAI</option>
+            <option value="chatgpt">ChatGPT</option>
+            <option value="azure">Azure OpenAI</option>
+            <option value="anthropic">Anthropic Claude</option>
+            <option value="groq">Groq</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="ollama">Ollama</option>
+            <option value="custom">Custom</option>
           </select>
         </div>
         
@@ -349,7 +347,7 @@
       <header class="chat-header">
         <h1 id="chatTitle" data-i18n="appTitle">AI Assistant</h1>
         <div class="header-buttons">
-          <button id="settingsButton" class="settings-btn" data-i18n="settings">⚙️</button>
+          <button id="settingsButton" class="settings-btn"><img src="icons/setting.png" alt="設定" class="settings-icon"></button>
         </div>
       </header>
       
@@ -392,12 +390,12 @@
     </div>
   </div>
   
+  <script src="scripts/marked.min.js"></script>
+  <script src="scripts/dompurify.min.js"></script>
   <script src="scripts/i18n.js"></script>
   <script src="scripts/security-manager.js"></script>
   <script src="scripts/crypto-utils.js"></script>
-  <script src="scripts/markdown-parser.js"></script>
   <script src="scripts/openai-compatible.js"></script>
-  <script src="scripts/chatgpt-api.js"></script>
   <script src="scripts/aws-bedrock.js"></script>
   <script src="scripts/sidepanel.js"></script>
 </body>

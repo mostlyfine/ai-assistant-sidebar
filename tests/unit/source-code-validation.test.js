@@ -12,7 +12,6 @@ describe('Source Code Validation Tests', () => {
         'content.js',
         'aws-bedrock.js',
         'azure-openai.js',
-        'chatgpt-api.js',
         'crypto-utils.js',
         'openai-compatible.js'
       ];
@@ -59,15 +58,6 @@ describe('Source Code Validation Tests', () => {
       expect(content).toMatch(/AWS Signature Version 4/);
     });
 
-    test('should validate chatgpt-api.js structure', () => {
-      const filePath = path.join(scriptsDir, 'chatgpt-api.js');
-      const content = fs.readFileSync(filePath, 'utf8');
-      
-      // Check for ChatGPT API functionality
-      expect(content).toMatch(/class ChatGPTAPI/);
-      expect(content).toMatch(/async sendMessage/);
-      expect(content).toMatch(/api\.openai\.com/);
-    });
 
     test('should validate openai-compatible.js structure', () => {
       const filePath = path.join(scriptsDir, 'openai-compatible.js');
@@ -97,7 +87,6 @@ describe('Source Code Validation Tests', () => {
         'content.js',
         'aws-bedrock.js',
         'azure-openai.js',
-        'chatgpt-api.js',
         'crypto-utils.js',
         'openai-compatible.js'
       ];
@@ -120,7 +109,6 @@ describe('Source Code Validation Tests', () => {
       const files = [
         'sidepanel.js',
         'aws-bedrock.js',
-        'chatgpt-api.js',
         'openai-compatible.js'
       ];
 
@@ -184,7 +172,6 @@ describe('Source Code Validation Tests', () => {
       // Check for configuration management
       expect(content).toMatch(/vertex-ai/);
       expect(content).toMatch(/openai-compatible/);
-      expect(content).toMatch(/chatgpt/);
       expect(content).toMatch(/aws-bedrock/);
       expect(content).toMatch(/uiSettings/);
     });
@@ -196,7 +183,6 @@ describe('Source Code Validation Tests', () => {
       // Check for AI provider initialization
       expect(content).toMatch(/GeminiAPI/);
       expect(content).toMatch(/OpenAICompatibleAPI/);
-      expect(content).toMatch(/ChatGPTAPI/);
       expect(content).toMatch(/AWSBedrockAPI/);
     });
   });

@@ -29,6 +29,7 @@ npm run build:extension    # Chrome拡張機能のZIPパッケージを作成
 - 開発中は、ファイル変更後にChrome拡張機能ページで「更新」が必要
 - DevToolsでサイドパネルのデバッグが可能
 - Content Scriptの変更時は対象ページの再読み込みも必要
+- 外部ライブラリ（marked.min.js、dompurify.min.js）はscriptsフォルダに配置済み
 
 ## アーキテクチャ
 
@@ -43,7 +44,8 @@ gemini-plugin/
 ├── scripts/
 │   ├── content.js            # Content Script（ページ内容読み取り）
 │   ├── crypto-utils.js       # JWT生成とOAuth認証（Vertex AI用）
-│   ├── markdown-parser.js    # Markdownパーサー（リッチテキスト表示）
+│   ├── marked.min.js         # Markdownパーサー（marked.js v16.0.0）
+│   ├── dompurify.min.js      # HTMLサニタイザー（DOMPurify）
 │   ├── openai-compatible.js  # OpenAI Compatible API統合（7プロバイダー対応）
 │   ├── chatgpt-api.js        # ChatGPT API統合
 │   ├── aws-bedrock.js        # AWS Bedrock API統合（AWS Signature V4認証）
@@ -59,7 +61,6 @@ gemini-plugin/
 │       ├── api-integrations.test.js  # API統合テスト
 │       ├── i18n.test.js              # 国際化テスト
 │       ├── integration.test.js       # 統合テスト
-│       ├── markdown-parser.test.js   # Markdownパーサーテスト
 │       ├── source-code-validation.test.js  # ソースコード検証テスト
 │       └── utility-functions.test.js       # ユーティリティ関数テスト
 └── icons/                    # 拡張機能用アイコン（16/32/48/128px）
@@ -142,13 +143,14 @@ gemini-plugin/
 #### モダンチャットUI
 - **吹き出しデザイン**: ユーザーメッセージ（右、青）、AIメッセージ（左、白）
 - **アニメーション**: メッセージ表示時のスライドインエフェクト
-- **Markdownサポート**: コードブロック、見出し、リスト、太字、イタリック
+- **Markdownサポート**: marked.js v16.0.0を使用、GFM（GitHub Flavored Markdown）完全対応
 - **リサイズ機能**: ドラッグによる入力エリア高さ調整
 - **タイムスタンプ**: 各メッセージに時刻表示
 - **AI識別表示**: 応答したAI名を時刻部分にアイコン付きで表示
 - **国際化対応**: 日本語・英語の完全対応、言語切り替え機能
 - **スクロール機能**: 長い会話の滑らかなスクロール対応、カスタムスクロールバー
 - **フォントサイズ調整**: 8pt-24ptまで選択可能、デフォルト12pt
+- **統一フォント**: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif
 
 #### カスタムインストラクション機能
 - **システムプロンプト統一**: 全てのAI APIに適用される共通の指示
@@ -297,14 +299,13 @@ gemini-plugin/
 ## テストシステム
 
 ### 実装済みテスト体系
-1. **包括的ユニットテスト**: 131個のテストケース（100%パス率）
+1. **包括的ユニットテスト**: 107個のテストケース（100%パス率）
 2. **API統合テスト**: 全AI プロバイダーの統合テスト
 3. **国際化テスト**: 日本語・英語対応の完全テスト
-4. **Markdownパーサーテスト**: リッチテキスト表示機能のテスト
-5. **ソースコード検証テスト**: セキュリティ・品質検証
-6. **統合テスト**: エンドツーエンドのワークフローテスト
-7. **ユーティリティ関数テスト**: 各種ヘルパー関数のテスト
-8. **セキュリティテスト**: 暗号化機能とSecurityManagerのテスト
+4. **ソースコード検証テスト**: セキュリティ・品質検証
+5. **統合テスト**: エンドツーエンドのワークフローテスト
+6. **ユーティリティ関数テスト**: 各種ヘルパー関数のテスト
+7. **セキュリティテスト**: 暗号化機能とSecurityManagerのテスト
 
 ### テスト実行環境
 - **フレームワーク**: Jest (jsdom環境)
@@ -321,7 +322,6 @@ tests/
     ├── api-integrations.test.js     # 各AI API統合テスト
     ├── i18n.test.js                 # 国際化システムテスト
     ├── integration.test.js          # エンドツーエンド統合テスト
-    ├── markdown-parser.test.js      # Markdownパーサーテスト
     ├── source-code-validation.test.js  # コード品質・セキュリティ検証
     └── utility-functions.test.js        # ユーティリティ関数テスト
 ```

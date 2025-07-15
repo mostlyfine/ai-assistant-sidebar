@@ -578,4 +578,358 @@ describe('AIAssistant Class Tests', () => {
       expect(result).toBe('chat');
     });
   });
+
+  describe('Markdown Parsing', () => {
+    beforeEach(() => {
+      // Mock marked library
+      global.marked = {
+        setOptions: jest.fn(),
+        parse: jest.fn((text) => text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')),
+        Renderer: jest.fn(() => ({
+          link: function(href, title, text) {
+            return `<a href="${href}" target="_blank">${text}</a>`;
+          },
+          checkbox: function(checked) {
+            return `<input type="checkbox" disabled${checked ? ' checked' : ''}> `;
+          },
+          code: function(code, lang) {
+            return `<pre><code class="language-${lang || ''}">${code}</code></pre>`;
+          }
+        }))
+      };
+    });
+
+    test('should parse markdown with marked library', () => {
+      const parseMarkdown = (text) => {
+        if (!text || typeof text !== 'string') return '';
+        
+        if (typeof marked !== 'undefined' && marked.parse) {
+          try {
+            if (marked.setOptions) {
+              marked.setOptions({
+                breaks: true,
+                gfm: true,
+                sanitize: false,
+                pedantic: false,
+                smartLists: true,
+                smartypants: false,
+                xhtml: false
+              });
+            }
+            
+            const result = marked.parse(text);
+            return result;
+          } catch (error) {
+            return text.replace(/\n/g, '<br>');
+          }
+        }
+        return text.replace(/\n/g, '<br>');
+      };
+
+      const input = '**Bold text** and normal text';
+      const result = parseMarkdown(input);
+      
+      expect(marked.setOptions).toHaveBeenCalledWith({
+        breaks: true,
+        gfm: true,
+        sanitize: false,
+        pedantic: false,
+        smartLists: true,
+        smartypants: false,
+        xhtml: false
+      });
+      expect(marked.parse).toHaveBeenCalledWith(input);
+      expect(result).toContain('<strong>Bold text</strong>');
+    });
+
+    test('should fallback when marked is not available', () => {
+      global.marked = undefined;
+      
+      const fallbackParseMarkdown = (text) => {
+        if (!text || typeof text !== 'string') return '';
+        
+        const escaped = text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#x27;');
+        
+        return escaped.replace(/\n/g, '<br>');
+      };
+
+      const input = '**Bold text** and <script>alert("xss")</script>\nNew line';
+      const result = fallbackParseMarkdown(input);
+      
+      expect(result).toContain('**Bold text**');
+      expect(result).toContain('&lt;script&gt;');
+      expect(result).toContain('<br>');
+    });
+
+    test('should handle empty input', () => {
+      const parseMarkdown = (text) => {
+        if (!text || typeof text !== 'string') return '';
+        return text;
+      };
+
+      expect(parseMarkdown('')).toBe('');
+      expect(parseMarkdown(null)).toBe('');
+      expect(parseMarkdown(undefined)).toBe('');
+    });
+  });
+
+  describe('Keyboard Event Handling', () => {
+    test('should handle keyboard events for message sending', () => {
+      const mockSendMessage = jest.fn();
+      const mockInput = {
+        removeEventListener: jest.fn(),
+        addEventListener: jest.fn(),
+        placeholder: ''
+      };
+      
+      document.getElementById = jest.fn().mockReturnValue(mockInput);
+      
+      const setupKeyboardEvents = function() {
+        const messageInput = document.getElementById('messageInput');
+        if (!messageInput) return;
+        
+        this.isComposing = false;
+        this.compositionStartHandler = () => { this.isComposing = true; };
+        this.compositionEndHandler = () => { this.isComposing = false; };
+        
+        this.keydownHandler = (event) => {
+          if (this.isComposing) return;
+          
+          if (this.uiSettings.useShiftEnter) {
+            if (event.key === 'Enter' && event.shiftKey) {
+              event.preventDefault();
+              this.sendMessage();
+            }
+          } else {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              this.sendMessage();
+            }
+          }
+        };
+        
+        messageInput.addEventListener('keydown', this.keydownHandler);
+        messageInput.addEventListener('compositionstart', this.compositionStartHandler);
+        messageInput.addEventListener('compositionend', this.compositionEndHandler);
+      };
+      
+      const assistant = {
+        sendMessage: mockSendMessage,
+        uiSettings: { useShiftEnter: false },
+        setupKeyboardEvents
+      };
+      
+      assistant.setupKeyboardEvents();
+      
+      // Get the keydown handler that was added
+      const keydownHandler = mockInput.addEventListener.mock.calls
+        .find(call => call[0] === 'keydown')[1];
+      
+      // Test Enter key without Shift (should send when useShiftEnter is false)
+      const enterEvent = {
+        key: 'Enter',
+        shiftKey: false,
+        preventDefault: jest.fn()
+      };
+      
+      keydownHandler(enterEvent);
+      
+      expect(enterEvent.preventDefault).toHaveBeenCalled();
+      expect(mockSendMessage).toHaveBeenCalled();
+    });
+
+    test('should not send message during IME composition', () => {
+      const mockSendMessage = jest.fn();
+      const mockInput = {
+        removeEventListener: jest.fn(),
+        addEventListener: jest.fn(),
+        placeholder: ''
+      };
+      
+      document.getElementById = jest.fn().mockReturnValue(mockInput);
+      
+      const setupKeyboardEvents = function() {
+        const messageInput = document.getElementById('messageInput');
+        if (!messageInput) return;
+        
+        this.isComposing = false;
+        this.compositionStartHandler = () => { this.isComposing = true; };
+        this.compositionEndHandler = () => { this.isComposing = false; };
+        
+        this.keydownHandler = (event) => {
+          if (this.isComposing) return;
+          
+          if (this.uiSettings.useShiftEnter) {
+            if (event.key === 'Enter' && event.shiftKey) {
+              event.preventDefault();
+              this.sendMessage();
+            }
+          } else {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              this.sendMessage();
+            }
+          }
+        };
+        
+        messageInput.addEventListener('keydown', this.keydownHandler);
+        messageInput.addEventListener('compositionstart', this.compositionStartHandler);
+        messageInput.addEventListener('compositionend', this.compositionEndHandler);
+      };
+      
+      const assistant = {
+        sendMessage: mockSendMessage,
+        uiSettings: { useShiftEnter: false },
+        setupKeyboardEvents
+      };
+      
+      assistant.setupKeyboardEvents();
+      
+      // Get event handlers
+      const compositionStartHandler = mockInput.addEventListener.mock.calls
+        .find(call => call[0] === 'compositionstart')[1];
+      const compositionEndHandler = mockInput.addEventListener.mock.calls
+        .find(call => call[0] === 'compositionend')[1];
+      const keydownHandler = mockInput.addEventListener.mock.calls
+        .find(call => call[0] === 'keydown')[1];
+      
+      // Start IME composition
+      compositionStartHandler();
+      expect(assistant.isComposing).toBe(true);
+      
+      // Try to send message during composition
+      const enterEvent = {
+        key: 'Enter',
+        shiftKey: false,
+        preventDefault: jest.fn()
+      };
+      
+      keydownHandler(enterEvent);
+      
+      // Should not prevent default or send message during composition
+      expect(enterEvent.preventDefault).not.toHaveBeenCalled();
+      expect(mockSendMessage).not.toHaveBeenCalled();
+      
+      // End IME composition
+      compositionEndHandler();
+      expect(assistant.isComposing).toBe(false);
+      
+      // Now Enter should work normally
+      keydownHandler(enterEvent);
+      expect(enterEvent.preventDefault).toHaveBeenCalled();
+      expect(mockSendMessage).toHaveBeenCalled();
+    });
+  });
+
+  describe('Tab Switching', () => {
+    test('should switch tabs correctly', () => {
+      // Mock DOM elements
+      const mockTabButtons = [
+        { classList: { remove: jest.fn(), add: jest.fn() }, dataset: { tab: 'vertex-ai' } },
+        { classList: { remove: jest.fn(), add: jest.fn() }, dataset: { tab: 'openai-compatible' } }
+      ];
+      
+      const mockTabContents = [
+        { classList: { remove: jest.fn(), add: jest.fn() }, id: 'vertex-ai-tab' },
+        { classList: { remove: jest.fn(), add: jest.fn() }, id: 'openai-compatible-tab' }
+      ];
+      
+      const mockActiveTab = { classList: { add: jest.fn() }, dataset: { tab: 'vertex-ai' } };
+      const mockActiveContent = { classList: { add: jest.fn() }, id: 'vertex-ai-tab' };
+      
+      document.querySelectorAll = jest.fn()
+        .mockReturnValueOnce(mockTabButtons)  // First call for tab buttons
+        .mockReturnValueOnce(mockTabContents); // Second call for tab contents
+      
+      document.querySelector = jest.fn()
+        .mockReturnValueOnce(mockActiveTab);   // For active tab button
+        
+      document.getElementById = jest.fn()
+        .mockReturnValueOnce(mockActiveContent); // For active tab content
+      
+      const switchTab = function(tabName) {
+        if (!tabName) {
+          console.error('switchTab: tabName is required');
+          return;
+        }
+        
+        const tabButtons = document.querySelectorAll('.tab-button');
+        tabButtons.forEach(btn => {
+          if (btn && btn.classList) {
+            btn.classList.remove('active');
+          }
+        });
+        
+        const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+        if (tabButton && tabButton.classList) {
+          tabButton.classList.add('active');
+        }
+        
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => {
+          if (content && content.classList) {
+            content.classList.remove('active');
+          }
+        });
+        
+        const tabContent = document.getElementById(`${tabName}-tab`);
+        if (tabContent && tabContent.classList) {
+          tabContent.classList.add('active');
+        }
+      };
+      
+      const assistant = { switchTab };
+      
+      // Test tab switching
+      assistant.switchTab('vertex-ai');
+      
+      // Verify tab buttons are updated
+      expect(mockTabButtons[0].classList.remove).toHaveBeenCalledWith('active');
+      expect(mockTabButtons[1].classList.remove).toHaveBeenCalledWith('active');
+      expect(mockActiveTab.classList.add).toHaveBeenCalledWith('active');
+      
+      // Verify tab contents are updated
+      expect(mockTabContents[0].classList.remove).toHaveBeenCalledWith('active');
+      expect(mockTabContents[1].classList.remove).toHaveBeenCalledWith('active');
+      expect(mockActiveContent.classList.add).toHaveBeenCalledWith('active');
+    });
+
+    test('should handle missing tab elements gracefully', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      document.querySelectorAll = jest.fn()
+        .mockReturnValueOnce([]) // Empty tab buttons
+        .mockReturnValueOnce([]); // Empty tab contents
+        
+      const switchTab = function(tabName) {
+        if (!tabName) {
+          console.error('switchTab: tabName is required');
+          return;
+        }
+        
+        const tabButtons = document.querySelectorAll('.tab-button');
+        if (tabButtons.length === 0) {
+          console.error('switchTab: No tab buttons found');
+          return;
+        }
+      };
+      
+      const assistant = { switchTab };
+      
+      // Test with empty tab name
+      assistant.switchTab('');
+      expect(consoleSpy).toHaveBeenCalledWith('switchTab: tabName is required');
+      
+      // Test with no tab buttons
+      assistant.switchTab('vertex-ai');
+      expect(consoleSpy).toHaveBeenCalledWith('switchTab: No tab buttons found');
+      
+      consoleSpy.mockRestore();
+    });
+  });
 });

@@ -1,4 +1,6 @@
 // Tests for API integration modules
+const { OpenAICompatibleAPI, AzureOpenAI } = require('../../scripts/openai-compatible.js');
+
 describe('API Integration Modules', () => {
   let mockFetch;
 
@@ -583,6 +585,71 @@ VGVzdCBrZXkgZGF0YQ==
 
       const result = getSelectedText(mockWindow);
       expect(result).toBe('Selected text content');
+    });
+  });
+
+  describe('Azure OpenAI Configuration Validation', () => {
+    test('should validate Azure OpenAI configuration', () => {
+      // Test missing endpoint
+      expect(() => {
+        const api = new OpenAICompatibleAPI({
+          preset: 'azure',
+          endpoint: '',
+          apiKey: 'test-key',
+          deployment: 'gpt-4',
+          apiVersion: '2023-05-15'
+        });
+        api.buildURL();
+      }).toThrow('Azure OpenAI requires an endpoint URL');
+
+      // Test missing deployment
+      expect(() => {
+        const api = new OpenAICompatibleAPI({
+          preset: 'azure',
+          endpoint: 'https://test.openai.azure.com',
+          apiKey: 'test-key',
+          deployment: '',
+          apiVersion: '2023-05-15'
+        });
+        api.buildURL();
+      }).toThrow('Azure OpenAI requires a deployment name');
+
+      // Test missing API key
+      expect(() => {
+        const api = new OpenAICompatibleAPI({
+          preset: 'azure',
+          endpoint: 'https://test.openai.azure.com',
+          apiKey: '',
+          deployment: 'gpt-4',
+          apiVersion: '2023-05-15'
+        });
+        api.buildHeaders();
+      }).toThrow('Azure OpenAI requires an API key');
+    });
+
+    test('should build correct Azure OpenAI request body', () => {
+      const api = new OpenAICompatibleAPI({
+        preset: 'azure',
+        endpoint: 'https://test.openai.azure.com',
+        apiKey: 'test-key',
+        deployment: 'gpt-4',
+        apiVersion: '2023-05-15'
+      });
+
+      const requestBody = api.buildRequestBody('Hello', 'System prompt');
+      
+      // Azure OpenAI should not include model in request body
+      expect(requestBody).not.toHaveProperty('model');
+      expect(requestBody).toHaveProperty('messages');
+      expect(requestBody.messages).toHaveLength(2);
+      expect(requestBody.messages[0]).toEqual({
+        role: 'system',
+        content: 'System prompt'
+      });
+      expect(requestBody.messages[1]).toEqual({
+        role: 'user',
+        content: 'Hello'
+      });
     });
   });
 });

@@ -13,12 +13,13 @@ A comprehensive Chrome extension that integrates multiple AI providers in a conv
 ### 💬 Modern Chat Interface
 - **Bubble Design**: Clean, modern chat interface with user (right, blue) and AI (left, white) messages
 - **AI Identification**: Each AI response shows provider name and icon in timestamp
-- **Markdown Support**: Code blocks, headers, lists, bold, italic text rendering
+- **Markdown Support**: marked.js v16.0.0 with full GFM (GitHub Flavored Markdown) support
 - **Animations**: Smooth slide-in effects for new messages
 - **Resizable Input**: Drag-to-resize input area for longer messages
 - **Custom Instructions**: Global system prompts applied to all AI providers
 - **Scrollable Content**: Smooth scrolling for long conversations with custom scrollbar styling
 - **Flexible Font Size**: Adjustable font size from 8pt to 24pt with 12pt default
+- **Unified Font**: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif
 
 ### 🌐 Internationalization
 - **Bilingual Support**: Complete Japanese and English localization
@@ -108,7 +109,8 @@ gemini-plugin/
 ├── scripts/
 │   ├── content.js            # Content script for page content extraction
 │   ├── crypto-utils.js       # JWT generation and OAuth authentication (Vertex AI)
-│   ├── markdown-parser.js    # Markdown parser for rich text display
+│   ├── marked.min.js         # Markdown parser (marked.js v16.0.0)
+│   ├── dompurify.min.js      # HTML sanitizer (DOMPurify)
 │   ├── openai-compatible.js  # OpenAI Compatible API integration (7 providers)
 │   ├── chatgpt-api.js        # ChatGPT API integration
 │   ├── aws-bedrock.js        # AWS Bedrock API integration with Signature V4
@@ -124,7 +126,6 @@ gemini-plugin/
 │       ├── api-integrations.test.js  # API integration tests
 │       ├── i18n.test.js              # Internationalization tests
 │       ├── integration.test.js       # End-to-end integration tests
-│       ├── markdown-parser.test.js   # Markdown parser tests
 │       ├── source-code-validation.test.js  # Code quality & security tests
 │       └── utility-functions.test.js       # Utility function tests
 └── icons/                    # Extension icons (16/32/48/128px)
@@ -172,10 +173,9 @@ npm run test:coverage # Run tests with coverage report
 ```
 
 ### Test Suite
-- **131 Unit Tests**: Complete test coverage for all major components
+- **107 Unit Tests**: Complete test coverage for all major components
 - **API Integration Tests**: Tests for all AI provider integrations
 - **Internationalization Tests**: Japanese/English localization validation
-- **Markdown Parser Tests**: Rich text rendering validation
 - **Security Tests**: Code quality and security validation
 - **Integration Tests**: End-to-end workflow testing
 
@@ -283,7 +283,7 @@ For issues and questions:
 ## Quality Assurance
 
 ### Comprehensive Test Suite
-- **131 Unit Tests**: 100% pass rate with comprehensive coverage
+- **107 Unit Tests**: 100% pass rate with comprehensive coverage
 - **API Integration Testing**: All AI providers validated
 - **Security Testing**: Code quality and vulnerability scanning
 - **Internationalization Testing**: Complete Japanese/English validation
@@ -295,6 +295,7 @@ For issues and questions:
 3. **Security Tests**: Credential safety and data protection
 4. **Performance Tests**: Memory management and API throttling
 5. **Accessibility Tests**: UI/UX compliance verification
+6. **Library Integration**: External library compatibility and security
 
 ### Continuous Quality Monitoring
 - Automated test execution on code changes
