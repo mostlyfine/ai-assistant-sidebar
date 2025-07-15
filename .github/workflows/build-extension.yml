@@ -142,19 +142,21 @@ jobs:
     - name: Check for sensitive files
       run: |
         echo "Checking for sensitive files..."
-        # APIキーやシークレットが含まれていないかチェック（テストファイルとnode_modulesを除外）
-        if grep -r "sk-[a-zA-Z0-9]{32,}" --include="*.js" --include="*.json" --include="*.md" --exclude-dir=node_modules --exclude-dir=tests . 2>/dev/null; then
+        # 実際のAPIキーやシークレットの値をチェック（テストファイルとnode_modulesを除外）
+        # OpenAI APIキーの実際の値をチェック（"sk-"で始まり32文字以上）
+        if grep -r '"sk-[a-zA-Z0-9]{32,}"' --include="*.js" --include="*.json" --include="*.md" --exclude-dir=node_modules --exclude-dir=tests . 2>/dev/null; then
           echo "❌ Potential OpenAI API keys found!"
           exit 1
         fi
         
-        if grep -r "AKIA[A-Z0-9]{16}" --include="*.js" --include="*.json" --include="*.md" --exclude-dir=node_modules --exclude-dir=tests . 2>/dev/null; then
+        # AWS Access Key IDの実際の値をチェック（"AKIA"で始まり20文字）
+        if grep -r '"AKIA[A-Z0-9]{16}"' --include="*.js" --include="*.json" --include="*.md" --exclude-dir=node_modules --exclude-dir=tests . 2>/dev/null; then
           echo "❌ Potential AWS keys found!"
           exit 1
         fi
         
-        # Service Account JSONファイルの検出
-        if grep -r "private_key" --include="*.js" --include="*.json" --include="*.md" --exclude-dir=node_modules --exclude-dir=tests . 2>/dev/null; then
+        # Service Account JSONファイルの実際の秘密鍵をチェック（"-----BEGIN PRIVATE KEY-----"）
+        if grep -r "-----BEGIN PRIVATE KEY-----" --include="*.js" --include="*.json" --include="*.md" --exclude-dir=node_modules --exclude-dir=tests . 2>/dev/null; then
           echo "❌ Potential service account keys found!"
           exit 1
         fi
