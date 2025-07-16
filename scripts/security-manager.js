@@ -30,7 +30,6 @@ class SecurityManager {
       }
       
       this.initialized = true;
-      console.log('SecurityManager initialized successfully');
     } catch (error) {
       console.error('Failed to initialize SecurityManager:', error);
       throw new Error('セキュリティマネージャーの初期化に失敗しました');

@@ -275,11 +275,6 @@ class OpenAICompatibleAPI {
       const headers = this.buildHeaders();
       const body = this.buildRequestBody(message, systemPrompt);
 
-      console.log('OpenAI Compatible API Request:', {
-        url: url,
-        preset: this.preset,
-        headers: { ...headers, [this.getPresetConfig().authHeader]: '[REDACTED]' }
-      });
 
       const response = await fetch(url, {
         method: 'POST',
