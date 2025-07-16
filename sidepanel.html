@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="styles/sidepanel.css">
 </head>
 <body>
-  <!-- API設定画面 -->
   <div id="setupScreen" class="screen">
     <div class="setup-container">
       <div class="header">
@@ -15,7 +14,6 @@
         <p data-i18n="setupTitle">AI APIを設定してください</p>
       </div>
       
-      <!-- タブナビゲーション -->
       <div class="tab-navigation">
         <button class="tab-button active" data-tab="vertex-ai" data-i18n="tabVertexAI"><img src="icons/vertex.png" alt="Vertex AI" class="tab-icon"><span>Vertex AI</span></button>
         <button class="tab-button" data-tab="openai-compatible" data-i18n="tabOpenAICompatible"><img src="icons/openai.png" alt="OpenAI" class="tab-icon"><span>OpenAI Compatible</span></button>
@@ -23,11 +21,9 @@
         <button class="tab-button" data-tab="general" data-i18n="tabGeneral"><img src="icons/setting.png" alt="設定" class="tab-icon"><span>全体設定</span></button>
       </div>
 
-      <!-- Vertex AI設定タブ -->
       <div id="vertex-ai-tab" class="tab-content active">
         <h3 data-i18n="vertexAISettings">Vertex AI 設定</h3>
         
-        <!-- 認証方式選択 -->
         <div class="input-group">
           <label data-i18n="authMethod">認証方式</label>
           <div class="auth-method-selection">
@@ -44,7 +40,6 @@
           </div>
         </div>
 
-        <!-- Service Account設定 -->
         <div id="serviceAccountSection">
           <div class="input-group">
             <label for="serviceAccountFile" data-i18n="serviceAccountFile">Service Account JSON ファイル</label>
@@ -74,7 +69,6 @@
           </div>
         </div>
 
-        <!-- API Key設定 -->
         <div id="apiKeySection" style="display: none;">
           <div class="input-group">
             <label for="vertexProjectId" data-i18n="projectId">Project ID</label>
@@ -112,11 +106,9 @@
         </div>
       </div>
 
-      <!-- OpenAI Compatible設定タブ -->
       <div id="openai-compatible-tab" class="tab-content">
         <h3 data-i18n="openaiCompatibleSettings">OpenAI Compatible 設定</h3>
         
-        <!-- プリセット選択 -->
         <div class="input-group">
           <label for="openaiPreset" data-i18n="preset">プリセット</label>
           <select id="openaiPreset">
@@ -131,19 +123,16 @@
           </select>
         </div>
         
-        <!-- エンドポイント -->
         <div class="input-group">
           <label for="openaiEndpoint" data-i18n="endpoint">エンドポイント</label>
           <input type="url" id="openaiEndpoint" data-i18n-placeholder="placeholderOpenAIEndpoint">
         </div>
         
-        <!-- API キー -->
         <div class="input-group">
           <label for="openaiApiKey" data-i18n="apiKey">API キー</label>
           <input type="password" id="openaiApiKey" data-i18n-placeholder="placeholderOpenAIApiKey">
         </div>
         
-        <!-- モデル -->
         <div class="input-group">
           <label for="openaiModel" data-i18n="model">モデル</label>
           <select id="openaiModel">
@@ -155,7 +144,6 @@
           </select>
         </div>
         
-        <!-- Azure用追加設定 -->
         <div id="azureSettings" class="azure-settings" style="display: none;">
           <div class="input-group">
             <label for="azureApiVersion" data-i18n="apiVersion">API バージョン</label>
@@ -171,13 +159,11 @@
           </div>
         </div>
         
-        <!-- カスタムモデル入力 -->
         <div id="customModelInput" class="input-group" style="display: none;">
           <label for="customModel" data-i18n="customModel">カスタムモデル</label>
           <input type="text" id="customModel" data-i18n-placeholder="placeholderCustomModel">
         </div>
         
-        <!-- ChatGPT用Organization ID -->
         <div id="organizationInput" class="input-group" style="display: none;">
           <label for="organizationId" data-i18n="organizationId">Organization ID (オプション)</label>
           <input type="text" id="organizationId" data-i18n-placeholder="placeholderOrganizationId">
@@ -185,7 +171,6 @@
       </div>
 
 
-      <!-- AWS Bedrock設定タブ -->
       <div id="aws-bedrock-tab" class="tab-content">
         <h3 data-i18n="awsBedrockSettings">AWS Bedrock 設定</h3>
         <div class="input-group">
@@ -205,16 +190,25 @@
           <select id="awsRegion">
             <option value="us-east-1">US East (N. Virginia)</option>
             <option value="us-west-2">US West (Oregon)</option>
+            <option value="us-east-2">US East (Ohio)</option>
             <option value="eu-west-1">Europe (Ireland)</option>
+            <option value="eu-west-3">Europe (Paris)</option>
+            <option value="eu-central-1">Europe (Frankfurt)</option>
             <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
             <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+            <option value="ap-south-1">Asia Pacific (Mumbai)</option>
+            <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+            <option value="ca-central-1">Canada (Central)</option>
+            <option value="sa-east-1">South America (São Paulo)</option>
           </select>
         </div>
         <div class="input-group">
           <label for="awsBedrockModel" data-i18n="model">モデル</label>
           <select id="awsBedrockModel">
-            <option value="anthropic.claude-3-5-sonnet-20241022-v2:0">Claude 3.5 Sonnet v2</option>
-            <option value="anthropic.claude-3-5-sonnet-20240620-v1:0">Claude 3.5 Sonnet v1</option>
+            <option value="anthropic.claude-3-5-sonnet-20240620-v1:0" selected>Claude 3.5 Sonnet v1</option>
+            <option value="us.anthropic.claude-sonnet-4-20250514-v1:0">Claude Sonnet 4 (US)</option>
+            <option value="us.anthropic.claude-3-7-sonnet-20250219-v1:0">Claude 3.7 Sonnet (US)</option>
+            <option value="us.anthropic.claude-3-5-sonnet-20241022-v2:0">Claude 3.5 Sonnet v2 (US)</option>
             <option value="anthropic.claude-3-haiku-20240307-v1:0">Claude 3 Haiku</option>
             <option value="anthropic.claude-3-sonnet-20240229-v1:0">Claude 3 Sonnet</option>
             <option value="anthropic.claude-3-opus-20240229-v1:0">Claude 3 Opus</option>
@@ -230,7 +224,6 @@
         </div>
       </div>
 
-      <!-- 全体設定タブ -->
       <div id="general-tab" class="tab-content">
         <h3 data-i18n="generalSettings">全体設定</h3>
         <div class="input-group">
@@ -242,7 +235,6 @@
           </select>
         </div>
         
-        <!-- OpenAI Compatible プリセット選択 -->
         <div class="input-group" id="openaiCompatiblePresetGroup" style="display: none;">
           <label for="openaiCompatiblePreset" data-i18n="openaiCompatiblePreset">OpenAI Compatible プリセット</label>
           <select id="openaiCompatiblePreset">
@@ -341,7 +333,6 @@
     </div>
   </div>
 
-  <!-- チャット画面 -->
   <div id="chatScreen" class="screen hidden">
     <div class="chat-container">
       <header class="chat-header">
