@@ -5,44 +5,45 @@ class AWSBedrockAPI {
     this.region = config.region || 'us-east-1';
     this.accessKeyId = config.accessKeyId;
     this.secretAccessKey = config.secretAccessKey;
-    this.model = config.model || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+    this.model = config.model || 'anthropic.claude-3-5-sonnet-20240620-v1:0';
     this.sessionToken = config.sessionToken; // Optional (when using STS token)
   }
 
   // Generate AWS Signature Version 4
   async createSignature(method, url, headers, body, datetime) {
-    const canonicalRequest = this.createCanonicalRequest(method, url, headers, body);
-    const stringToSign = this.createStringToSign(datetime, canonicalRequest);
+    const canonicalRequest = await this.createCanonicalRequest(method, url, headers, body);
+    const stringToSign = await this.createStringToSign(datetime, canonicalRequest);
     const signature = await this.calculateSignature(stringToSign, datetime);
     return signature;
   }
 
-  createCanonicalRequest(method, url, headers, body) {
+  async createCanonicalRequest(method, url, headers, body) {
     const urlObj = new URL(url);
-    const canonicalUri = urlObj.pathname;
+    // AWS requires proper URL encoding for path
+    const canonicalUri = encodeURI(urlObj.pathname).replace(/:/g, '%3A');
     const canonicalQueryString = urlObj.search.substring(1);
-    
+
     // Normalize headers
     const canonicalHeaders = Object.keys(headers)
       .sort()
       .map(key => `${key.toLowerCase()}:${headers[key].trim()}`)
       .join('\n') + '\n';
-    
+
     const signedHeaders = Object.keys(headers)
       .sort()
       .map(key => key.toLowerCase())
       .join(';');
-    
-    const bodyHash = this.sha256(body);
-    
+
+    const bodyHash = await this.sha256(body);
+
     return `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${bodyHash}`;
   }
 
-  createStringToSign(datetime, canonicalRequest) {
+  async createStringToSign(datetime, canonicalRequest) {
     const algorithm = 'AWS4-HMAC-SHA256';
     const credentialScope = `${datetime.substring(0, 8)}/${this.region}/bedrock/aws4_request`;
-    const canonicalRequestHash = this.sha256(canonicalRequest);
-    
+    const canonicalRequestHash = await this.sha256(canonicalRequest);
+
     return `${algorithm}\n${datetime}\n${credentialScope}\n${canonicalRequestHash}`;
   }
 
@@ -51,8 +52,13 @@ class AWSBedrockAPI {
     const dateRegionKey = await this.hmacSha256(dateKey, this.region);
     const dateRegionServiceKey = await this.hmacSha256(dateRegionKey, 'bedrock');
     const signingKey = await this.hmacSha256(dateRegionServiceKey, 'aws4_request');
-    
-    return await this.hmacSha256(signingKey, stringToSign);
+
+    const signatureBytes = await this.hmacSha256(signingKey, stringToSign);
+
+    // Convert Uint8Array to hex string
+    return Array.from(signatureBytes)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
   }
 
   sha256(data) {
@@ -71,7 +77,7 @@ class AWSBedrockAPI {
       false,
       ['sign']
     );
-    
+
     const signature = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(data));
     return new Uint8Array(signature);
   }
@@ -86,10 +92,10 @@ class AWSBedrockAPI {
     try {
       const datetime = this.getISODateTime();
       const url = `https://bedrock-runtime.${this.region}.amazonaws.com/model/${this.model}/invoke`;
-      
+
       // Create messages
       const messages = [];
-      
+
       // Add system prompt if available
       if (options.systemPrompt && options.systemPrompt.trim()) {
         messages.push({
@@ -97,12 +103,12 @@ class AWSBedrockAPI {
           content: options.systemPrompt.trim()
         });
       }
-      
+
       messages.push({
         role: "user",
         content: prompt
       });
-      
+
       // Create request body
       const body = JSON.stringify({
         anthropic_version: "bedrock-2023-05-31",
@@ -126,7 +132,7 @@ class AWSBedrockAPI {
 
       // Generate signature
       const signature = await this.createSignature('POST', url, headers, body, datetime);
-      
+
       // Add Authorization header
       const credential = `${this.accessKeyId}/${datetime.substring(0, 8)}/${this.region}/bedrock/aws4_request`;
       const signedHeaders = Object.keys(headers).sort().map(key => key.toLowerCase()).join(';');
@@ -145,12 +151,12 @@ class AWSBedrockAPI {
       }
 
       const result = await response.json();
-      
+
       // Process Anthropic Claude response format
       if (result.content && result.content.length > 0) {
         return result.content[0].text;
       }
-      
+
       throw new Error('Invalid response format from Bedrock API');
 
     } catch (error) {
@@ -163,22 +169,18 @@ class AWSBedrockAPI {
   validateConfig() {
     const requiredFields = ['accessKeyId', 'secretAccessKey', 'region'];
     const missingFields = requiredFields.filter(field => !this.config[field]);
-    
+
     if (missingFields.length > 0) {
       throw new Error(`Missing required Bedrock configuration: ${missingFields.join(', ')}`);
     }
-    
+
     return true;
   }
 
-  // List of available models
+  // List of available models (ON_DEMAND v1 models only)
   static getAvailableModels() {
     return [
-      {
-        id: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
-        name: 'Claude 3.5 Sonnet v2',
-        provider: 'Anthropic'
-      },
+      // Anthropic Claude models (ON_DEMAND supported)
       {
         id: 'anthropic.claude-3-5-sonnet-20240620-v1:0',
         name: 'Claude 3.5 Sonnet v1',
@@ -199,6 +201,22 @@ class AWSBedrockAPI {
         name: 'Claude 3 Opus',
         provider: 'Anthropic'
       },
+      // Amazon models (ON_DEMAND supported)
+      {
+        id: 'amazon.nova-lite-v1:0',
+        name: 'Nova Lite',
+        provider: 'Amazon'
+      },
+      {
+        id: 'amazon.nova-pro-v1:0',
+        name: 'Nova Pro',
+        provider: 'Amazon'
+      },
+      {
+        id: 'amazon.nova-micro-v1:0',
+        name: 'Nova Micro',
+        provider: 'Amazon'
+      },
       {
         id: 'amazon.titan-text-premier-v1:0',
         name: 'Titan Text Premier',
@@ -210,14 +228,30 @@ class AWSBedrockAPI {
         provider: 'Amazon'
       },
       {
-        id: 'cohere.command-r-plus-v1:0',
-        name: 'Command R+',
-        provider: 'Cohere'
+        id: 'amazon.titan-text-lite-v1',
+        name: 'Titan Text Lite',
+        provider: 'Amazon'
+      },
+      // Meta Llama models
+      {
+        id: 'meta.llama3-3-70b-instruct-v1:0',
+        name: 'Llama 3.3 70B Instruct',
+        provider: 'Meta'
       },
       {
-        id: 'cohere.command-r-v1:0',
-        name: 'Command R',
-        provider: 'Cohere'
+        id: 'meta.llama3-1-405b-instruct-v1:0',
+        name: 'Llama 3.1 405B Instruct',
+        provider: 'Meta'
+      },
+      {
+        id: 'meta.llama3-1-70b-instruct-v1:0',
+        name: 'Llama 3.1 70B Instruct',
+        provider: 'Meta'
+      },
+      {
+        id: 'meta.llama3-1-8b-instruct-v1:0',
+        name: 'Llama 3.1 8B Instruct',
+        provider: 'Meta'
       },
       {
         id: 'meta.llama3-2-90b-instruct-v1:0',
@@ -238,6 +272,32 @@ class AWSBedrockAPI {
         id: 'meta.llama3-2-1b-instruct-v1:0',
         name: 'Llama 3.2 1B Instruct',
         provider: 'Meta'
+      },
+      // DeepSeek models
+      {
+        id: 'deepseek.deepseek-r1-distill-llama-70b-v1:0',
+        name: 'DeepSeek R1 Distill 70B',
+        provider: 'DeepSeek'
+      },
+      {
+        id: 'deepseek.deepseek-r1-distill-qwen-32b-v1:0',
+        name: 'DeepSeek R1 Distill 32B',
+        provider: 'DeepSeek'
+      },
+      {
+        id: 'deepseek.deepseek-r1-distill-qwen-14b-v1:0',
+        name: 'DeepSeek R1 Distill 14B',
+        provider: 'DeepSeek'
+      },
+      {
+        id: 'deepseek.deepseek-r1-distill-qwen-7b-v1:0',
+        name: 'DeepSeek R1 Distill 7B',
+        provider: 'DeepSeek'
+      },
+      {
+        id: 'deepseek.deepseek-r1-distill-qwen-1-5b-v1:0',
+        name: 'DeepSeek R1 Distill 1.5B',
+        provider: 'DeepSeek'
       }
     ];
   }
