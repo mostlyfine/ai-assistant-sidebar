@@ -19,13 +19,6 @@ class AIAssistant {
     this.setupScreen = document.getElementById('setupScreen');
     this.chatScreen = document.getElementById('chatScreen');
     
-    // DOM要素が存在するかチェック
-    if (!this.setupScreen) {
-      console.error('setupScreen element not found');
-    }
-    if (!this.chatScreen) {
-      console.error('chatScreen element not found');
-    }
     this.activeProvider = null;
     this.aiInstances = {};
     
@@ -107,8 +100,7 @@ class AIAssistant {
         return true;
       }
       
-      // フォールバック: 平文保存（セキュリティ警告）
-      console.warn('セキュリティマネージャーが利用できません。平文で保存します。');
+      // フォールバック: 平文保存
       await chrome.storage.local.set({ aiConfigs: this.configs });
       return true;
     } catch (error) {
@@ -132,7 +124,6 @@ class AIAssistant {
    */
   async migrateToSecureStorage() {
     try {
-      console.log('平文ストレージからセキュアストレージに移行中...');
       
       // 現在の設定をセキュアストレージに保存
       await window.securityManager.setSecure('aiConfigs', this.configs);
@@ -140,7 +131,6 @@ class AIAssistant {
       // 古い平文データを削除
       await chrome.storage.local.remove(['aiConfigs']);
       
-      console.log('セキュアストレージへの移行が完了しました');
     } catch (error) {
       console.error('セキュアストレージへの移行に失敗しました:', error);
       throw error;
@@ -178,7 +168,6 @@ class AIAssistant {
         // 設定を保存
         await this.saveConfigs();
         
-        console.log('ChatGPT設定をOpenAI Compatible設定に移行しました');
       }
       
       // ChatGPT設定を削除
@@ -388,8 +377,6 @@ class AIAssistant {
           
           if (tabName) {
             this.switchTab(tabName);
-          } else {
-            console.error('Tab name not found for clicked element:', e.target);
           }
         });
       }
@@ -523,14 +510,12 @@ class AIAssistant {
 
   switchTab(tabName) {
     if (!tabName) {
-      console.error('switchTab: tabName is required');
       return;
     }
     
     // Update tab button states
     const tabButtons = document.querySelectorAll('.tab-button');
     if (tabButtons.length === 0) {
-      console.error('switchTab: No tab buttons found');
       return;
     }
     
@@ -543,14 +528,11 @@ class AIAssistant {
     const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
     if (tabButton && tabButton.classList) {
       tabButton.classList.add('active');
-    } else {
-      console.error(`switchTab: Tab button not found for ${tabName}`);
     }
     
     // Switch tab content display
     const tabContents = document.querySelectorAll('.tab-content');
     if (tabContents.length === 0) {
-      console.error('switchTab: No tab contents found');
       return;
     }
     
@@ -563,9 +545,6 @@ class AIAssistant {
     const tabContent = document.getElementById(`${tabName}-tab`);
     if (tabContent && tabContent.classList) {
       tabContent.classList.add('active');
-      console.log(`switchTab: Successfully switched to ${tabName}`);
-    } else {
-      console.error(`switchTab: Tab content not found for ${tabName}-tab`);
     }
   }
 
@@ -742,14 +721,6 @@ class AIAssistant {
         alert(i18n.t('errorValidatingOpenAI') + ': ' + error.message);
         return;
       }
-    } else {
-      console.log('OpenAI Compatible config validation failed:', {
-        preset: openaiPreset,
-        endpoint: openaiEndpoint,
-        apiKey: openaiApiKey ? '[REDACTED]' : null,
-        deployment: azureDeployment,
-        validationResult: openaiConfigValid
-      });
     }
 
 
@@ -949,7 +920,7 @@ class AIAssistant {
       document.getElementById('awsSecretAccessKey').value = config.secretAccessKey || '';
       document.getElementById('awsSessionToken').value = config.sessionToken || '';
       document.getElementById('awsRegion').value = config.region || 'us-east-1';
-      document.getElementById('awsBedrockModel').value = config.model || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+      document.getElementById('awsBedrockModel').value = config.model || 'us.anthropic.claude-sonnet-4-20250514-v1:0';
     }
 
     // UI settings restoration
@@ -1039,7 +1010,6 @@ class AIAssistant {
   setupKeyboardEvents() {
     const messageInput = document.getElementById('messageInput');
     if (!messageInput) {
-      console.error('messageInput element not found');
       return;
     }
     
@@ -1365,11 +1335,9 @@ class AIAssistant {
           });
         } else {
           // DOMPurifyが利用できない場合は、markedの結果をそのまま使用
-          console.warn('DOMPurify is not available, using marked result without sanitization');
           return result;
         }
       } catch (error) {
-        console.error('Marked parsing error:', error);
         // エラーの場合はフォールバック処理
         return this.fallbackParseMarkdown(text);
       }
