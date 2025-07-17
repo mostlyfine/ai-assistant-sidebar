@@ -59,6 +59,8 @@ class I18n {
         fontSize: 'フォントサイズ',
         useShiftEnter: 'Shift+Enterで送信',
         useShiftEnterHelp: 'オフの場合、Enterキーで送信されます',
+        enableContextKeep: 'コンテキスト維持',
+        enableContextKeepHelp: '有効にすると、過去の会話履歴をAIに送信して文脈を維持します。無効にすると、各メッセージが独立して処理されます。',
         
         // Buttons
         cancel: 'キャンセル',
@@ -204,6 +206,8 @@ class I18n {
         fontSize: 'Font Size',
         useShiftEnter: 'Send with Shift+Enter',
         useShiftEnterHelp: 'When off, Enter key will send messages',
+        enableContextKeep: 'Keep Context',
+        enableContextKeepHelp: 'When enabled, sends conversation history to AI to maintain context. When disabled, each message is processed independently.',
         
         // Buttons
         cancel: 'Cancel',
