@@ -307,8 +307,36 @@ body {
 }
 
 .checkbox-label input[type="checkbox"] {
-  margin-right: 0.5rem;
-  transform: scale(1.2);
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  background: #ccc;
+  border-radius: 12px;
+  position: relative;
+  margin-right: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  background: #667eea;
+}
+
+.checkbox-label input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.checkbox-label input[type="checkbox"]:checked::before {
+  transform: translateX(20px);
 }
 
 .help-text {
@@ -749,9 +777,36 @@ body {
 }
 
 .checkbox-control input[type="checkbox"] {
-  margin-right: 0.5rem;
-  transform: scale(1.1);
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  background: #ccc;
+  border-radius: 12px;
+  position: relative;
+  margin-right: 0.75rem;
   cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.checkbox-control input[type="checkbox"]:checked {
+  background: #667eea;
+}
+
+.checkbox-control input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.checkbox-control input[type="checkbox"]:checked::before {
+  transform: translateX(20px);
 }
 
 .checkmark-custom {
@@ -774,9 +829,37 @@ body {
 }
 
 .radio-option input[type="radio"] {
-  margin-right: 0.5rem;
-  transform: scale(1.1);
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ced4da;
+  border-radius: 4px;
+  position: relative;
+  margin-right: 0.75rem;
   cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.radio-option input[type="radio"]:checked {
+  border-color: #28a745;
+  background: #28a745;
+}
+
+.radio-option input[type="radio"]::before {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  transition: transform 0.2s ease;
+}
+
+.radio-option input[type="radio"]:checked::before {
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .radio-custom {

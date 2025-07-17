@@ -263,6 +263,16 @@
               すべてのAI APIに適用される共通のシステムプロンプトです。空欄の場合はデフォルトの動作になります。
             </small>
           </div>
+          
+          <div class="input-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="enableContextKeep" checked>
+              <span data-i18n="enableContextKeep">コンテキスト維持</span>
+            </label>
+            <small class="help-text" data-i18n="enableContextKeepHelp">
+              有効にすると、過去の会話履歴をAIに送信して文脈を維持します。無効にすると、各メッセージが独立して処理されます。
+            </small>
+          </div>
         </div>
 
         <div class="ui-settings">

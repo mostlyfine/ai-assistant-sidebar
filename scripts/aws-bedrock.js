@@ -165,6 +165,81 @@ class AWSBedrockAPI {
     }
   }
 
+  async callAPIWithHistory(messages, options = {}) {
+    try {
+      const datetime = this.getISODateTime();
+      const url = `https://bedrock-runtime.${this.region}.amazonaws.com/model/${this.model}/invoke`;
+
+      // Create messages array with history
+      const formattedMessages = [];
+
+      // Add system prompt if available
+      if (options.systemPrompt && options.systemPrompt.trim()) {
+        formattedMessages.push({
+          role: "system",
+          content: options.systemPrompt.trim()
+        });
+      }
+
+      // Add conversation history
+      formattedMessages.push(...messages);
+
+      // Create request body
+      const body = JSON.stringify({
+        anthropic_version: "bedrock-2023-05-31",
+        max_tokens: options.maxTokens || 4000,
+        temperature: options.temperature || 0.7,
+        messages: formattedMessages
+      });
+
+      // Create headers
+      const headers = {
+        'Content-Type': 'application/json',
+        'Host': `bedrock-runtime.${this.region}.amazonaws.com`,
+        'X-Amz-Date': datetime,
+        'X-Amz-Target': 'com.amazon.bedrock.runtime.InvokeModel'
+      };
+
+      // Add session token if available
+      if (this.sessionToken) {
+        headers['X-Amz-Security-Token'] = this.sessionToken;
+      }
+
+      // Generate signature
+      const signature = await this.createSignature('POST', url, headers, body, datetime);
+
+      // Add Authorization header
+      const credential = `${this.accessKeyId}/${datetime.substring(0, 8)}/${this.region}/bedrock/aws4_request`;
+      const signedHeaders = Object.keys(headers).sort().map(key => key.toLowerCase()).join(';');
+      headers['Authorization'] = `AWS4-HMAC-SHA256 Credential=${credential}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+      // Send API request
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: body
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Bedrock API Error: ${response.status} ${response.statusText}\n${errorText}`);
+      }
+
+      const result = await response.json();
+
+      // Process Anthropic Claude response format
+      if (result.content && result.content.length > 0) {
+        return result.content[0].text;
+      }
+
+      throw new Error('Invalid response format from Bedrock API');
+
+    } catch (error) {
+      console.error('Bedrock API call error:', error);
+      throw error;
+    }
+  }
+
   // Validate configuration
   validateConfig() {
     const requiredFields = ['accessKeyId', 'secretAccessKey', 'region'];

@@ -14,7 +14,8 @@ class AIAssistant {
       includePageContent: false,
       includeSelectedText: false,
       language: i18n.getCurrentLanguage(),
-      customInstructions: ''
+      customInstructions: '',
+      enableContextKeep: true
     };
     this.setupScreen = document.getElementById('setupScreen');
     this.chatScreen = document.getElementById('chatScreen');
@@ -238,6 +239,172 @@ class AIAssistant {
       console.error('Failed to save chat history:', error);
       return false;
     }
+  }
+
+  restoreChatHistory() {
+    const messagesContainer = document.getElementById('chatMessages');
+    if (!messagesContainer || !this.activeProvider) {
+      return;
+    }
+
+    // チャット画面をクリア
+    messagesContainer.innerHTML = '';
+
+    // アクティブプロバイダーの履歴を取得
+    const history = this.chatHistories[this.activeProvider] || [];
+
+    // 履歴からメッセージを復元
+    history.forEach(messageData => {
+      this.displayHistoryMessage(messageData);
+    });
+
+    // 最新メッセージまでスクロール
+    this.scrollToBottom();
+  }
+
+  displayHistoryMessage(messageData) {
+    const messagesContainer = document.getElementById('chatMessages');
+    const messageElement = document.createElement('div');
+    
+    const timestamp = new Date(messageData.timestamp);
+    const timeString = timestamp.toLocaleTimeString();
+
+    if (messageData.type === 'user') {
+      messageElement.classList.add('message', 'user-message');
+      const messageContent = document.createElement('div');
+      messageContent.classList.add('message-content');
+      
+      const messageText = document.createElement('div');
+      messageText.classList.add('message-text');
+      messageText.textContent = messageData.content;
+      
+      const messageTime = document.createElement('div');
+      messageTime.classList.add('message-time');
+      messageTime.textContent = timeString;
+      
+      messageContent.appendChild(messageText);
+      messageContent.appendChild(messageTime);
+      messageElement.appendChild(messageContent);
+    } else if (messageData.type === 'ai') {
+      messageElement.classList.add('message', 'ai-message');
+      const messageContent = document.createElement('div');
+      messageContent.classList.add('message-content');
+      
+      const messageText = document.createElement('div');
+      messageText.classList.add('message-text');
+      
+      // Markdownを処理してHTMLに変換
+      if (window.marked) {
+        messageText.innerHTML = DOMPurify.sanitize(window.marked.parse(messageData.content));
+      } else {
+        messageText.textContent = messageData.content;
+      }
+      
+      const messageTime = document.createElement('div');
+      messageTime.classList.add('message-time');
+      
+      // プロバイダー情報を表示
+      const providerData = {
+        'vertex-ai': { name: 'Vertex AI', icon: 'icons/vertex.png' },
+        'openai-compatible': { name: 'OpenAI Compatible', icon: 'icons/openai.png' },
+        'aws-bedrock': { name: 'AWS Bedrock', icon: 'icons/bedrock.png' }
+      };
+      
+      const provider = providerData[messageData.provider];
+      if (provider) {
+        const providerImg = document.createElement('img');
+        providerImg.src = provider.icon;
+        providerImg.alt = provider.name;
+        providerImg.classList.add('provider-icon');
+        messageTime.appendChild(providerImg);
+        messageTime.appendChild(document.createTextNode(`${provider.name} • ${timeString}`));
+      } else {
+        messageTime.textContent = timeString;
+      }
+      
+      messageContent.appendChild(messageText);
+      messageContent.appendChild(messageTime);
+      messageElement.appendChild(messageContent);
+    }
+
+    messagesContainer.appendChild(messageElement);
+  }
+
+  scrollToBottom() {
+    const messagesContainer = document.getElementById('chatMessages');
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  }
+
+  switchActiveProvider(newProvider) {
+    // プロバイダーが変更された場合のみ処理
+    if (this.activeProvider !== newProvider) {
+      this.activeProvider = newProvider;
+      this.updateChatTitle();
+      
+      // チャット画面が表示されている場合、履歴を再表示
+      if (!this.chatScreen.classList.contains('hidden')) {
+        this.restoreChatHistory();
+      }
+    }
+  }
+
+  buildConversationContext(provider) {
+    // コンテキスト維持が無効の場合は空の配列を返す
+    if (!this.uiSettings.enableContextKeep) {
+      return [];
+    }
+    
+    const history = this.chatHistories[provider] || [];
+    const messages = [];
+
+    // 履歴からメッセージを構築
+    history.forEach(messageData => {
+      if (messageData.type === 'user') {
+        messages.push({
+          role: 'user',
+          content: messageData.content
+        });
+      } else if (messageData.type === 'ai') {
+        messages.push({
+          role: 'assistant',
+          content: messageData.content
+        });
+      }
+    });
+
+    return messages;
+  }
+
+  calculateTokens(text) {
+    // 簡易的なトークン数計算（1トークン ≈ 4文字として概算）
+    // より正確な計算には専用ライブラリが必要
+    return Math.ceil(text.length / 4);
+  }
+
+  trimContextByTokens(messages, maxTokens = 4000) {
+    // カスタムインストラクション分のトークンを予約
+    const reservedTokens = 500;
+    const availableTokens = maxTokens - reservedTokens;
+    
+    let totalTokens = 0;
+    const trimmedMessages = [];
+
+    // 最新のメッセージから逆順で追加
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      const messageTokens = this.calculateTokens(message.content);
+      
+      if (totalTokens + messageTokens <= availableTokens) {
+        trimmedMessages.unshift(message);
+        totalTokens += messageTokens;
+      } else {
+        break;
+      }
+    }
+
+    return trimmedMessages;
   }
 
   initializeI18n() {
@@ -478,6 +645,7 @@ class AIAssistant {
     if (defaultProvider) {
       defaultProvider.addEventListener('change', (e) => {
         this.toggleOpenAICompatiblePresetUI();
+        this.switchActiveProvider(e.target.value);
       });
     }
     
@@ -760,7 +928,8 @@ class AIAssistant {
       includePageContent: document.getElementById('includePageContent').checked,
       includeSelectedText: document.getElementById('includeSelectedText').checked,
       language: document.getElementById('language').value,
-      customInstructions: document.getElementById('customInstructionsText').value
+      customInstructions: document.getElementById('customInstructionsText').value,
+      enableContextKeep: document.getElementById('enableContextKeep').checked
     };
 
     // Execute save
@@ -954,6 +1123,7 @@ class AIAssistant {
     document.getElementById('openaiCompatiblePreset').value = this.uiSettings.openaiCompatiblePreset || 'openai';
     document.getElementById('language').value = this.uiSettings.language;
     document.getElementById('customInstructionsText').value = this.uiSettings.customInstructions || '';
+    document.getElementById('enableContextKeep').checked = this.uiSettings.enableContextKeep;
     
     // Show/hide OpenAI Compatible preset selection
     this.toggleOpenAICompatiblePresetUI();
@@ -978,6 +1148,7 @@ class AIAssistant {
     }
     if (this.chatScreen) {
       this.chatScreen.classList.remove('hidden');
+      this.restoreChatHistory();
     }
   }
 
@@ -1183,11 +1354,27 @@ class AIAssistant {
       }
     }
     
-    // For Vertex AI, prepend custom instructions to message
-    let finalMessage = message;
-    if (customInstructions) {
-      finalMessage = `${customInstructions}\n\n${message}`;
+    // 会話履歴を取得（コンテキスト維持設定を考慮）
+    const conversationHistory = this.buildConversationContext('vertex-ai');
+    const trimmedHistory = this.trimContextByTokens(conversationHistory);
+
+    // Vertex AIの場合、会話履歴を文字列として結合
+    let contextString = '';
+    if (this.uiSettings.enableContextKeep && trimmedHistory.length > 0) {
+      contextString = trimmedHistory.map(msg => 
+        `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+      ).join('\n\n') + '\n\n';
     }
+
+    // カスタムインストラクションと履歴、新しいメッセージを結合
+    let finalMessage = '';
+    if (customInstructions) {
+      finalMessage += `${customInstructions}\n\n`;
+    }
+    if (contextString) {
+      finalMessage += `Previous conversation:\n${contextString}`;
+    }
+    finalMessage += `User: ${message}`;
     
     return await this.aiInstances['vertex-ai'].generateContent(finalMessage, config.model);
   }
@@ -1198,7 +1385,15 @@ class AIAssistant {
       const activeConfig = this.getActiveOpenAICompatibleConfig(config);
       this.aiInstances['openai-compatible'] = new OpenAICompatibleAPI(activeConfig);
     }
-    return await this.aiInstances['openai-compatible'].sendMessage(message, customInstructions);
+    
+    // 会話履歴を取得してOpenAI形式のメッセージ配列を作成
+    const conversationHistory = this.buildConversationContext('openai-compatible');
+    const trimmedHistory = this.trimContextByTokens(conversationHistory);
+    
+    // 新しいメッセージを追加
+    const messages = [...trimmedHistory, { role: 'user', content: message }];
+    
+    return await this.aiInstances['openai-compatible'].sendMessageWithHistory(messages, customInstructions);
   }
 
   getActiveOpenAICompatibleConfig(config) {
@@ -1226,12 +1421,19 @@ class AIAssistant {
       this.aiInstances['aws-bedrock'] = new AWSBedrockAPI(config);
     }
     
-    const options = {};
+    // 会話履歴を取得してClaude形式のメッセージ配列を作成
+    const conversationHistory = this.buildConversationContext('aws-bedrock');
+    const trimmedHistory = this.trimContextByTokens(conversationHistory);
+    
+    // 新しいメッセージを追加
+    const messages = [...trimmedHistory, { role: 'user', content: message }];
+    
+    const options = { messages };
     if (customInstructions) {
       options.systemPrompt = customInstructions;
     }
     
-    return await this.aiInstances['aws-bedrock'].callAPI(message, options);
+    return await this.aiInstances['aws-bedrock'].callAPIWithHistory(messages, options);
   }
 
   addUserMessage(message) {
@@ -1303,7 +1505,39 @@ class AIAssistant {
           // コードブロックの言語クラスを追加
           renderer.code = function(code, lang) {
             const language = lang || '';
-            return `<pre><code class="language-${language}">${code}</code></pre>`;
+            
+            // 型チェックとデータ変換
+            let codeContent = '';
+            if (typeof code === 'string') {
+              codeContent = code;
+            } else if (code != null && typeof code === 'object') {
+              // オブジェクトの場合、textプロパティがあれば優先的に使用
+              if (code.text && typeof code.text === 'string') {
+                codeContent = code.text;
+              } else if (code.raw && typeof code.raw === 'string') {
+                // rawプロパティがあれば次に使用（マークダウン記法を除去）
+                codeContent = code.raw.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
+              } else {
+                // その他の場合はJSONとして整形
+                codeContent = JSON.stringify(code, null, 2);
+              }
+            } else if (code != null) {
+              // その他の型の場合は文字列に変換
+              codeContent = String(code);
+            } else {
+              // null/undefinedの場合は空文字列
+              codeContent = '';
+            }
+            
+            // HTMLエスケープ処理（XSS対策）
+            codeContent = codeContent
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#x27;');
+            
+            return `<pre><code class="language-${language}">${codeContent}</code></pre>`;
           };
         }
         

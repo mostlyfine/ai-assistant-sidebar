@@ -324,6 +324,82 @@ class OpenAICompatibleAPI {
     }
   }
 
+  async sendMessageWithHistory(messages, systemPrompt = null) {
+    try {
+      const url = this.buildURL();
+      const headers = this.buildHeaders();
+      const body = this.buildRequestBodyWithHistory(messages, systemPrompt);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const errorDetails = {
+          status: response.status,
+          statusText: response.statusText,
+          url: url,
+          preset: this.preset,
+          errorText: errorText
+        };
+        console.error('OpenAI Compatible API Error Details:', errorDetails);
+        throw new Error(`API エラー (${response.status}): ${errorText}`);
+      }
+
+      const data = await response.json();
+      return this.parseResponse(data);
+
+    } catch (error) {
+      console.error('OpenAI Compatible API呼び出しエラー:', error);
+      throw error;
+    }
+  }
+
+  buildRequestBodyWithHistory(messages, systemPrompt = null) {
+    const presetConfig = this.getPresetConfig();
+
+    // Message format for Anthropic
+    if (presetConfig.messageFormat === 'anthropic') {
+      const anthropicMessages = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      const body = {
+        model: this.model,
+        messages: anthropicMessages,
+        max_tokens: 4096
+      };
+
+      if (systemPrompt) {
+        body.system = systemPrompt;
+      }
+
+      return body;
+    }
+
+    // Standard OpenAI format
+    const formattedMessages = [];
+    if (systemPrompt) {
+      formattedMessages.push({
+        role: 'system',
+        content: systemPrompt
+      });
+    }
+
+    formattedMessages.push(...messages);
+
+    return {
+      model: this.model,
+      messages: formattedMessages,
+      max_tokens: 4096,
+      temperature: 0.7
+    };
+  }
+
   static getAvailablePresets() {
     return [
       { id: 'openai', name: 'OpenAI' },
