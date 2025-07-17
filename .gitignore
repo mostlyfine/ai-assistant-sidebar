@@ -20,7 +20,7 @@ coverage/
 .env.production.local
 
 # IDE files
-.calude/
+.claude/
 .vscode/
 .idea/
 *.swp
