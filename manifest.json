@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Assistant Sidebar",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Multi-AI assistant in Chrome sidebar with Vertex AI, Azure OpenAI, ChatGPT, and AWS Bedrock",
   "icons": {
     "16": "icons/icon16.png",
