@@ -2052,10 +2052,111 @@ class AIAssistant {
       }
     } catch (error) {
       console.error(i18n.t('errorPageContent'), error);
+      
+      // Show user-friendly error message for permission issues
+      if (error.message && error.message.includes('Cannot access contents of url')) {
+        this.showPermissionError(error.message);
+      } else if (error.message && error.message.includes('Extension manifest must request permission')) {
+        this.showPermissionError(error.message);
+      }
+      
       return null;
     }
   }
 
+  showPermissionError(errorMessage) {
+    // Extract URL from error message
+    const urlMatch = errorMessage.match(/Cannot access contents of url "(.*?)"/);
+    const url = urlMatch ? urlMatch[1] : 'このサイト';
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'permission-error-notification';
+    errorDiv.innerHTML = `
+      <div class="error-icon">🔒</div>
+      <div class="error-content">
+        <h4>${i18n.t('permissionErrorTitle') || 'サイトアクセス権限が必要です'}</h4>
+        <p>${i18n.t('permissionErrorMessage') || `${url} の内容を読み取るには、Chrome拡張機能の設定でサイトアクセス権限を許可してください。`}</p>
+        <button class="error-action" onclick="this.parentElement.parentElement.remove()">
+          ${i18n.t('permissionErrorAction') || '了解'}
+        </button>
+      </div>
+      <button class="error-close" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    // Add CSS styles if not already present
+    if (!document.querySelector('.permission-error-styles')) {
+      const style = document.createElement('style');
+      style.className = 'permission-error-styles';
+      style.textContent = `
+        .permission-error-notification {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          max-width: 350px;
+          background: white;
+          border: 1px solid #ffc107;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 16px;
+          z-index: 1000;
+          animation: slideIn 0.3s ease-out;
+        }
+        .permission-error-notification .error-icon {
+          font-size: 24px;
+          min-width: 24px;
+        }
+        .permission-error-notification .error-content {
+          flex: 1;
+        }
+        .permission-error-notification .error-content h4 {
+          margin: 0 0 8px 0;
+          font-size: 14px;
+          color: #856404;
+        }
+        .permission-error-notification .error-content p {
+          margin: 0 0 12px 0;
+          font-size: 12px;
+          color: #666;
+          line-height: 1.4;
+        }
+        .permission-error-notification .error-action {
+          padding: 6px 12px;
+          font-size: 12px;
+          background: #ffc107;
+          color: #212529;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        .permission-error-notification .error-close {
+          background: none;
+          border: none;
+          font-size: 18px;
+          color: #999;
+          cursor: pointer;
+          min-width: 20px;
+          height: 20px;
+        }
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(errorDiv);
+    
+    // Auto-remove after 8 seconds
+    setTimeout(() => {
+      if (document.body.contains(errorDiv)) {
+        errorDiv.remove();
+      }
+    }, 8000);
+  }
 
   setupResizeHandler() {
     const resizeHandle = document.getElementById('resizeHandle');

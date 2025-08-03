@@ -147,7 +147,12 @@ class I18n {
         logsCleared: 'チャット履歴を削除しました',
         clearLogsOptions: 'どの履歴を削除しますか？',
         clearAllLogs: '全ての履歴を削除',
-        clearCurrentLogs: '現在のAIの履歴のみ削除'
+        clearCurrentLogs: '現在のAIの履歴のみ削除',
+        
+        // Permission error messages
+        permissionErrorTitle: "サイトアクセス権限が必要です",
+        permissionErrorMessage: "このサイトの内容を読み取るには、Chrome拡張機能の設定でサイトアクセス権限を許可してください。",
+        permissionErrorAction: "了解"
       },
       
       en: {
@@ -294,7 +299,12 @@ class I18n {
         logsCleared: 'Chat history cleared',
         clearLogsOptions: 'Which history do you want to clear?',
         clearAllLogs: 'Clear all history',
-        clearCurrentLogs: 'Clear current AI history only'
+        clearCurrentLogs: 'Clear current AI history only',
+        
+        // Permission error messages
+        permissionErrorTitle: "Site Access Permission Required",
+        permissionErrorMessage: "To read content from this site, please allow site access permission in Chrome extension settings.",
+        permissionErrorAction: "OK"
       }
     };
   }
