@@ -112,9 +112,7 @@ gemini-plugin/
 │   ├── marked.min.js         # Markdown parser (marked.js v16.0.0)
 │   ├── dompurify.min.js      # HTML sanitizer (DOMPurify)
 │   ├── openai-compatible.js  # OpenAI Compatible API integration (7 providers)
-│   ├── chatgpt-api.js        # ChatGPT API integration
 │   ├── aws-bedrock.js        # AWS Bedrock API integration with Signature V4
-│   ├── azure-openai.js       # Azure OpenAI API integration
 │   ├── i18n.js               # Internationalization system (Japanese/English)
 │   ├── security-manager.js   # AES-GCM encryption for secure credential storage
 │   ├── build.js              # Build script for Chrome extension packaging

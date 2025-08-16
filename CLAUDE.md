@@ -47,9 +47,7 @@ gemini-plugin/
 │   ├── marked.min.js         # Markdownパーサー（marked.js v16.0.0）
 │   ├── dompurify.min.js      # HTMLサニタイザー（DOMPurify）
 │   ├── openai-compatible.js  # OpenAI Compatible API統合（7プロバイダー対応）
-│   ├── chatgpt-api.js        # ChatGPT API統合
 │   ├── aws-bedrock.js        # AWS Bedrock API統合（AWS Signature V4認証）
-│   ├── azure-openai.js       # Azure OpenAI API統合
 │   ├── i18n.js               # 国際化システム（日本語・英語）
 │   ├── security-manager.js   # AES-GCM暗号化による機密情報保護
 │   ├── build.js              # Chrome拡張機能ビルドスクリプト
