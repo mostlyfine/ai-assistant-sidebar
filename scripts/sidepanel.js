@@ -12,7 +12,6 @@ class AIAssistant {
       defaultProvider: 'vertex-ai',
       openaiCompatiblePreset: 'openai',
       includePageContent: false,
-      includeSelectedText: false,
       language: i18n.getCurrentLanguage(),
       customInstructions: '',
       enableContextKeep: true
@@ -439,6 +438,15 @@ class AIAssistant {
       }
     });
 
+    // Set title for elements with data-i18n-title attribute
+    document.querySelectorAll('[data-i18n-title]').forEach(element => {
+      const key = element.getAttribute('data-i18n-title');
+      const text = i18n.t(key);
+      if (text) {
+        element.title = text;
+      }
+    });
+
     // Set HTML lang attribute to current language
     document.documentElement.lang = i18n.getCurrentLanguage();
   }
@@ -617,12 +625,6 @@ class AIAssistant {
       });
     }
 
-    const includeSelectedText = document.getElementById('includeSelectedText');
-    if (includeSelectedText) {
-      includeSelectedText.addEventListener('change', () => {
-        this.saveCheckboxStates();
-      });
-    }
     
     // Language selection
     const language = document.getElementById('language');
@@ -926,7 +928,6 @@ class AIAssistant {
       openaiCompatiblePreset: document.getElementById('openaiCompatiblePreset').value,
       inputHeight: this.uiSettings.inputHeight,
       includePageContent: document.getElementById('includePageContent').checked,
-      includeSelectedText: document.getElementById('includeSelectedText').checked,
       language: document.getElementById('language').value,
       customInstructions: document.getElementById('customInstructionsText').value,
       enableContextKeep: document.getElementById('enableContextKeep').checked
@@ -1130,7 +1131,6 @@ class AIAssistant {
     
     // Restore checkbox states
     document.getElementById('includePageContent').checked = this.uiSettings.includePageContent;
-    document.getElementById('includeSelectedText').checked = this.uiSettings.includeSelectedText;
   }
 
   showSetupScreen() {
@@ -1263,40 +1263,35 @@ class AIAssistant {
       return;
     }
 
-    // Add content if page content or text selection is enabled
+    // Add content if page content is enabled
     const includePageContent = document.getElementById('includePageContent').checked;
-    const includeSelectedText = document.getElementById('includeSelectedText').checked;
     
     let fullMessage = message;
     
-    if (includePageContent || includeSelectedText) {
+    if (includePageContent) {
       const pageContent = await this.getPageContent();
       if (pageContent) {
         fullMessage += '\n\n--- Reference Information ---\n';
+        fullMessage += `\nPage title: ${pageContent.title}\n`;
+        fullMessage += `URL: ${pageContent.url}\n`;
         
-        if (includePageContent) {
-          fullMessage += `\nPage title: ${pageContent.title}\n`;
-          fullMessage += `URL: ${pageContent.url}\n`;
-          
-          if (pageContent.metadata.headings && pageContent.metadata.headings.length > 0) {
-            fullMessage += `\nMain headings:\n`;
-            pageContent.metadata.headings.forEach(h => {
-              fullMessage += `${h.level.toUpperCase()}: ${h.text}\n`;
-            });
-          }
-          
+        if (pageContent.metadata.headings && pageContent.metadata.headings.length > 0) {
+          fullMessage += `\nMain headings:\n`;
+          pageContent.metadata.headings.forEach(h => {
+            fullMessage += `${h.level.toUpperCase()}: ${h.text}\n`;
+          });
+        }
+        
+        // Smart selection: if there's selected text, use it; otherwise use page content
+        if (pageContent.hasSelection && pageContent.selectedText) {
+          fullMessage += `\n選択テキスト:\n"${pageContent.selectedText}"\n`;
+        } else {
           fullMessage += `\nページ内容:\n${pageContent.text.substring(0, 8000)}`;
           if (pageContent.text.length > 8000) {
             fullMessage += `\n...(Content truncated due to length)`;
           }
         }
-        
-        if (includeSelectedText && pageContent.selectedText) {
-          fullMessage += `\n\nSelected text:\n"${pageContent.selectedText}"\n`;
-        } else if (includeSelectedText) {
-          fullMessage += `\n\n※No selected text found`;
-        }
-      } else if (includePageContent || includeSelectedText) {
+      } else {
         fullMessage += '\n\n※Failed to retrieve page content (may not be available on this page)';
       }
     }
@@ -2016,7 +2011,6 @@ class AIAssistant {
 
   async saveCheckboxStates() {
     this.uiSettings.includePageContent = document.getElementById('includePageContent').checked;
-    this.uiSettings.includeSelectedText = document.getElementById('includeSelectedText').checked;
     await this.saveUISettings();
   }
 

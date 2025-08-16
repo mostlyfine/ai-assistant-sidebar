@@ -1,11 +1,13 @@
 // Content Script - Read page content
 class PageContentReader {
   static extractPageContent() {
+    const selectedText = this.getSelectedText();
     const content = {
       title: document.title,
       url: window.location.href,
       text: this.extractMainText(),
-      selectedText: this.getSelectedText(),
+      selectedText: selectedText,
+      hasSelection: selectedText.length > 0,
       metadata: this.extractMetadata()
     };
     return content;
