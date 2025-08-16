@@ -71,7 +71,7 @@ class I18n {
         // Chat screen
         welcomeMessage: 'AI Assistant sidebarにようこそ！何かお手伝いできることはありますか？',
         includePageContent: '📄 ページ内容を含める',
-        includeSelectedText: '📝 選択テキストを含める',
+        includePageContentTooltip: '選択時は選択テキストのみ',
         messageInputPlaceholder: 'メッセージを入力してください...',
         messageInputShiftEnter: 'メッセージを入力してください... (Shift+Enterで送信)',
         messageInputEnter: 'メッセージを入力してください... (Enterで送信)',
@@ -223,7 +223,7 @@ class I18n {
         // Chat screen
         welcomeMessage: 'Welcome to AI Assistant sidebar! How can I help you today?',
         includePageContent: '📄 Include page content',
-        includeSelectedText: '📝 Include selected text',
+        includePageContentTooltip: 'Selected text only when available',
         messageInputPlaceholder: 'Type your message...',
         messageInputShiftEnter: 'Type your message... (Shift+Enter to send)',
         messageInputEnter: 'Type your message... (Enter to send)',

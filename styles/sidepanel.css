@@ -1133,3 +1133,54 @@ body {
 .clear-logs-btn:active {
   transform: translateY(0);
 }
+
+/* Enhanced tooltip styles */
+.checkbox-control {
+  position: relative;
+  cursor: pointer;
+}
+
+.checkbox-control[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 5px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: normal;
+  line-height: 1.2;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: tooltipFadeIn 0.2s ease-out;
+  pointer-events: none;
+}
+
+.checkbox-control[title]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: -1px;
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
+  z-index: 1001;
+  pointer-events: none;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
