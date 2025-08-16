@@ -11,7 +11,6 @@ describe('Source Code Validation Tests', () => {
         'sidepanel.js',
         'content.js',
         'aws-bedrock.js',
-        'azure-openai.js',
         'crypto-utils.js',
         'openai-compatible.js'
       ];
@@ -86,7 +85,6 @@ describe('Source Code Validation Tests', () => {
         'sidepanel.js',
         'content.js',
         'aws-bedrock.js',
-        'azure-openai.js',
         'crypto-utils.js',
         'openai-compatible.js'
       ];
