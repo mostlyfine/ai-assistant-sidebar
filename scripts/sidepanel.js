@@ -620,7 +620,17 @@ class AIAssistant {
     // Save checkbox states
     const includePageContent = document.getElementById('includePageContent');
     if (includePageContent) {
-      includePageContent.addEventListener('change', () => {
+      includePageContent.addEventListener('change', async (event) => {
+        if (event.target.checked) {
+          // Check permission before enabling
+          const hasPermission = await this.checkPageAccessPermission();
+          if (!hasPermission) {
+            // Show permission error and revert checkbox
+            this.showPermissionError('Cannot access contents of url');
+            event.target.checked = false;
+            return;
+          }
+        }
         this.saveCheckboxStates();
       });
     }
@@ -2073,6 +2083,35 @@ class AIAssistant {
     const message = i18n.t('permissionErrorMessage') || `${url} の内容を読み取るには、Chrome拡張機能の設定でサイトアクセス権限を許可してください。`;
     
     alert(`${title}\n\n${message}`);
+  }
+
+  async checkPageAccessPermission() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      if (!tab || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        return false;
+      }
+
+      try {
+        // Try to send a simple message to check if content script is accessible
+        await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+        return true;
+      } catch (messageError) {
+        // Try to inject content script
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['scripts/content.js']
+          });
+          return true;
+        } catch (injectError) {
+          return false;
+        }
+      }
+    } catch (error) {
+      return false;
+    }
   }
 
   setupResizeHandler() {
