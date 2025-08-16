@@ -100,6 +100,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } catch (error) {
       sendResponse({ success: false, error: error.message });
     }
+  } else if (message.action === 'ping') {
+    sendResponse({ success: true });
   }
   return true; // Indicates async response
 });
