@@ -5,6 +5,27 @@ All notable changes to the AI Assistant Sidebar Chrome Extension will be documen
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2025-08-17
+
+### 🔒 Security
+- Enhanced security management with comprehensive test coverage
+- Added proactive permission checking for page content integration
+
+### 🧪 Testing
+- Expanded test suite with improved source code validation
+- Added comprehensive security testing for API credentials
+- Enhanced integration testing for all AI providers
+- Improved test file organization and cleanup
+
+### 📚 Documentation  
+- Updated file structure documentation to reflect current codebase
+- Enhanced test documentation with detailed coverage information
+- Improved development command documentation
+
+### 🐛 Bug Fixes
+- Fixed test file list accuracy after codebase cleanup
+- Improved ping message handling in content script
+
 ## [1.0.3] - 2025-08-04
 
 ### ✨ Features
